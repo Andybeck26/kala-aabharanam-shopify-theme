@@ -1,0 +1,108 @@
+{% comment %}
+  Related Products Component
+  Displays related/recommended products with cross-selling functionality
+  Parameters:
+  - product: Current product object
+  - limit: Number of products to show (default: 4)
+  - title: Section title (optional)
+{% endcomment %}
+
+{% assign products_limit = limit | default: 4 %}
+{% assign section_title = title | default: 'products.product.related_products' | t %}
+
+<!-- Get product recommendations -->
+{% assign related_products = product.related_products %}
+{% if related_products.size == 0 %}
+  {% assign related_products = collections[product.collections.first.handle].products %}
+{% endif %}
+
+{% if related_products.size > 0 %}
+  <section class="related-products" aria-labelledby="related-products-heading">
+    <div class="container">
+      <h2 id="related-products-heading" class="related-products__title">
+        {{ section_title }}
+      </h2>
+      
+      <div class="related-products__grid">
+        {% for related_product in related_products limit: products_limit %}
+          {% unless related_product.id == product.id %}
+            <div class="related-products__item">
+              {% render 'product-card', 
+                product: related_product,
+                show_vendor: false,
+                show_rating: true,
+                image_ratio: 'square',
+                show_quick_add: true
+              %}
+            </div>
+          {% endunless %}
+        {% endfor %}
+      </div>
+      
+      <!-- View more link if there are more products -->
+      {% if related_products.size > products_limit %}
+        <div class="related-products__view-more">
+          <a href="{{ product.collections.first.url }}" class="btn btn--secondary">
+            {{ 'collections.general.view_all' | t }}
+          </a>
+        </div>
+      {% endif %}
+    </div>
+  </section>
+{% endif %}
+
+<style>
+  .related-products {
+    margin: var(--spacing-xxl) 0;
+    padding: var(--spacing-xl) 0;
+    background: var(--color-background-secondary);
+  }
+
+  .related-products__title {
+    font-family: var(--font-heading);
+    font-size: var(--font-size-xl);
+    text-align: center;
+    margin-bottom: var(--spacing-xl);
+    color: var(--color-text-primary);
+  }
+
+  .related-products__grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: var(--spacing-lg);
+    margin-bottom: var(--spacing-xl);
+  }
+
+  .related-products__item {
+    position: relative;
+  }
+
+  .related-products__view-more {
+    text-align: center;
+  }
+
+  /* Responsive adjustments */
+  @media (max-width: 767px) {
+    .related-products {
+      margin: var(--spacing-xl) 0;
+      padding: var(--spacing-lg) 0;
+    }
+
+    .related-products__title {
+      font-size: var(--font-size-lg);
+      margin-bottom: var(--spacing-lg);
+    }
+
+    .related-products__grid {
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: var(--spacing-md);
+    }
+  }
+
+  @media (max-width: 480px) {
+    .related-products__grid {
+      grid-template-columns: repeat(2, 1fr);
+      gap: var(--spacing-sm);
+    }
+  }
+</style>

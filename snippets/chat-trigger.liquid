@@ -1,0 +1,230 @@
+{% comment %}
+  Chat Trigger Button
+  A manual trigger button for the live chat that can be placed in header, footer, or other locations
+  Parameters:
+  - style: 'button' (default), 'link', or 'icon'
+  - text: Custom button text (optional)
+  - class: Additional CSS classes (optional)
+{% endcomment %}
+
+{% assign trigger_style = style | default: 'button' %}
+{% assign trigger_text = text | default: 'Chat with us' | t %}
+{% assign trigger_class = class | default: '' %}
+
+<div class="chat-trigger chat-trigger--{{ trigger_style }} {{ trigger_class }}">
+  {% case trigger_style %}
+    {% when 'button' %}
+      <button 
+        type="button" 
+        class="chat-trigger__button btn btn--secondary"
+        onclick="window.KalaAabharanamChat && window.KalaAabharanamChat.show()"
+        aria-label="{{ 'chat.open_chat' | t }}"
+      >
+        <span class="chat-trigger__icon">
+          {% render 'icon', icon: 'chat' %}
+        </span>
+        <span class="chat-trigger__text">{{ trigger_text }}</span>
+      </button>
+      
+    {% when 'link' %}
+      <a 
+        href="#" 
+        class="chat-trigger__link"
+        onclick="event.preventDefault(); window.KalaAabharanamChat && window.KalaAabharanamChat.show()"
+        aria-label="{{ 'chat.open_chat' | t }}"
+      >
+        <span class="chat-trigger__icon">
+          {% render 'icon', icon: 'chat' %}
+        </span>
+        <span class="chat-trigger__text">{{ trigger_text }}</span>
+      </a>
+      
+    {% when 'icon' %}
+      <button 
+        type="button" 
+        class="chat-trigger__icon-button"
+        onclick="window.KalaAabharanamChat && window.KalaAabharanamChat.show()"
+        aria-label="{{ 'chat.open_chat' | t }}"
+        title="{{ trigger_text }}"
+      >
+        {% render 'icon', icon: 'chat' %}
+      </button>
+      
+  {% endcase %}
+</div>
+
+<style>
+  .chat-trigger {
+    display: inline-block;
+  }
+
+  .chat-trigger__button {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-sm);
+    padding: var(--spacing-sm) var(--spacing-md);
+    background: var(--color-puce);
+    color: white;
+    border: none;
+    border-radius: var(--border-radius-sm);
+    font-size: var(--font-size-sm);
+    font-weight: var(--font-weight-medium);
+    cursor: pointer;
+    transition: all var(--transition-base);
+  }
+
+  .chat-trigger__button:hover {
+    background: var(--color-puce-dark);
+    transform: translateY(-1px);
+  }
+
+  .chat-trigger__link {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-sm);
+    color: var(--color-puce);
+    text-decoration: none;
+    font-size: var(--font-size-sm);
+    font-weight: var(--font-weight-medium);
+    transition: color var(--transition-base);
+  }
+
+  .chat-trigger__link:hover {
+    color: var(--color-puce-dark);
+  }
+
+  .chat-trigger__icon-button {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+    background: var(--color-puce);
+    color: white;
+    border: none;
+    border-radius: 50%;
+    cursor: pointer;
+    transition: all var(--transition-base);
+  }
+
+  .chat-trigger__icon-button:hover {
+    background: var(--color-puce-dark);
+    transform: scale(1.05);
+  }
+
+  .chat-trigger__icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 16px;
+    height: 16px;
+  }
+
+  .chat-trigger__icon svg {
+    width: 100%;
+    height: 100%;
+  }
+
+  .chat-trigger__text {
+    font-size: inherit;
+    font-weight: inherit;
+  }
+
+  /* Mobile responsive */
+  @media (max-width: 767px) {
+    .chat-trigger--mobile-icon .chat-trigger__text {
+      display: none;
+    }
+    
+    .chat-trigger--mobile-icon .chat-trigger__button {
+      padding: var(--spacing-sm);
+      min-width: 40px;
+      justify-content: center;
+    }
+  }
+
+  /* Animation for attention */
+  @keyframes chatPulse {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.05); }
+  }
+
+  .chat-trigger--pulse .chat-trigger__button,
+  .chat-trigger--pulse .chat-trigger__icon-button {
+    animation: chatPulse 2s infinite;
+  }
+
+  /* Status indicator */
+  .chat-trigger--online::after {
+    content: '';
+    position: absolute;
+    top: -2px;
+    right: -2px;
+    width: 8px;
+    height: 8px;
+    background: #00C851;
+    border-radius: 50%;
+    border: 2px solid white;
+  }
+
+  .chat-trigger--offline::after {
+    content: '';
+    position: absolute;
+    top: -2px;
+    right: -2px;
+    width: 8px;
+    height: 8px;
+    background: #FF4444;
+    border-radius: 50%;
+    border: 2px solid white;
+  }
+
+  .chat-trigger__icon-button,
+  .chat-trigger__button {
+    position: relative;
+  }
+</style>
+
+<script>
+  // Add online/offline status to chat triggers
+  document.addEventListener('DOMContentLoaded', function() {
+    const chatTriggers = document.querySelectorAll('.chat-trigger');
+    
+    // Check if it's business hours
+    function updateChatStatus() {
+      const now = new Date();
+      const currentHour = now.getHours();
+      const currentDay = now.getDay();
+      
+      const isOnline = isBusinessHours(currentDay, currentHour);
+      
+      chatTriggers.forEach(trigger => {
+        trigger.classList.remove('chat-trigger--online', 'chat-trigger--offline');
+        trigger.classList.add(isOnline ? 'chat-trigger--online' : 'chat-trigger--offline');
+      });
+    }
+    
+    // Helper function to check business hours
+    function isBusinessHours(day, hour) {
+      // Business hours: Mon-Fri 9AM-6PM, Sat 10AM-4PM (IST)
+      const schedule = {
+        1: { start: 9, end: 18 }, // Monday
+        2: { start: 9, end: 18 }, // Tuesday
+        3: { start: 9, end: 18 }, // Wednesday
+        4: { start: 9, end: 18 }, // Thursday
+        5: { start: 9, end: 18 }, // Friday
+        6: { start: 10, end: 16 }, // Saturday
+        0: null, // Sunday - closed
+      };
+      
+      const daySchedule = schedule[day];
+      if (!daySchedule) return false;
+      
+      return hour >= daySchedule.start && hour < daySchedule.end;
+    }
+    
+    // Update status immediately and then every minute
+    updateChatStatus();
+    setInterval(updateChatStatus, 60000);
+  });
+</script>

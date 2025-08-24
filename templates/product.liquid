@@ -1,0 +1,429 @@
+{% comment %}
+  Product Template
+  Displays individual product details with image gallery, customization options, and information tabs
+{% endcomment %}
+
+<div class="product-page" itemscope itemtype="https://schema.org/Product">
+  <div class="container">
+    <div class="product-page__content">
+      
+      <!-- Breadcrumb Navigation -->
+      <nav class="breadcrumb" aria-label="Breadcrumb">
+        <ol class="breadcrumb__list">
+          <li class="breadcrumb__item">
+            <a href="{{ routes.root_url }}" class="breadcrumb__link">
+              {{ 'general.breadcrumbs.home' | t }}
+            </a>
+          </li>
+          {% if collection %}
+            <li class="breadcrumb__item">
+              <a href="{{ collection.url }}" class="breadcrumb__link">
+                {{ collection.title }}
+              </a>
+            </li>
+          {% endif %}
+          <li class="breadcrumb__item breadcrumb__item--current" aria-current="page">
+            {{ product.title }}
+          </li>
+        </ol>
+      </nav>
+
+      <div class="product-layout">
+        
+        <!-- Product Images Column -->
+        <div class="product-layout__media">
+          {% render 'product-gallery', product: product %}
+        </div>
+
+        <!-- Product Information Column -->
+        <div class="product-layout__info">
+          
+          <!-- Product Title and Price -->
+          <div class="product-header">
+            <h1 class="product-title" itemprop="name">{{ product.title }}</h1>
+            
+            <div class="product-price" itemprop="offers" itemscope itemtype="https://schema.org/Offer">
+              {% render 'price', product: product %}
+              <meta itemprop="priceCurrency" content="{{ cart.currency.iso_code }}">
+              <meta itemprop="price" content="{{ product.price | divided_by: 100.0 }}">
+              <meta itemprop="availability" content="https://schema.org/{% if product.available %}InStock{% else %}OutOfStock{% endif %}">
+            </div>
+          </div>
+
+          <!-- Product Description -->
+          {% if product.description != blank %}
+            <div class="product-description" itemprop="description">
+              {{ product.description }}
+            </div>
+          {% endif %}
+
+          <!-- Product Form -->
+          <div class="product-form-wrapper">
+            {% render 'product-form', product: product %}
+          </div>
+
+          <!-- Product Information Tabs -->
+          <div class="product-tabs" x-data="{ activeTab: 'details' }">
+            
+            <!-- Tab Navigation -->
+            <div class="product-tabs__nav" role="tablist">
+              <button 
+                class="product-tabs__btn"
+                :class="{ 'product-tabs__btn--active': activeTab === 'details' }"
+                @click="activeTab = 'details'"
+                role="tab"
+                aria-selected="true"
+                aria-controls="tab-details"
+                id="tab-btn-details"
+              >
+                {{ 'products.product.tabs.details' | t }}
+              </button>
+              
+              {% if product.metafields.custom.care_instructions %}
+                <button 
+                  class="product-tabs__btn"
+                  :class="{ 'product-tabs__btn--active': activeTab === 'care' }"
+                  @click="activeTab = 'care'"
+                  role="tab"
+                  aria-selected="false"
+                  aria-controls="tab-care"
+                  id="tab-btn-care"
+                >
+                  {{ 'products.product.tabs.care' | t }}
+                </button>
+              {% endif %}
+              
+              <button 
+                class="product-tabs__btn"
+                :class="{ 'product-tabs__btn--active': activeTab === 'reviews' }"
+                @click="activeTab = 'reviews'"
+                role="tab"
+                aria-selected="false"
+                aria-controls="tab-reviews"
+                id="tab-btn-reviews"
+              >
+                {{ 'products.product.tabs.reviews' | t }}
+              </button>
+            </div>
+
+            <!-- Tab Content -->
+            <div class="product-tabs__content">
+              
+              <!-- Details Tab -->
+              <div 
+                x-show="activeTab === 'details'"
+                class="product-tabs__panel"
+                role="tabpanel"
+                aria-labelledby="tab-btn-details"
+                id="tab-details"
+              >
+                <div class="product-details">
+                  {% if product.metafields.custom.material %}
+                    <div class="product-detail">
+                      <strong>{{ 'products.product.material' | t }}:</strong>
+                      <span>{{ product.metafields.custom.material }}</span>
+                    </div>
+                  {% endif %}
+                  
+                  {% if product.metafields.custom.dimensions %}
+                    <div class="product-detail">
+                      <strong>{{ 'products.product.dimensions' | t }}:</strong>
+                      <span>{{ product.metafields.custom.dimensions }}</span>
+                    </div>
+                  {% endif %}
+                  
+                  {% if product.metafields.custom.weight %}
+                    <div class="product-detail">
+                      <strong>{{ 'products.product.weight' | t }}:</strong>
+                      <span>{{ product.metafields.custom.weight }}</span>
+                    </div>
+                  {% endif %}
+                  
+                  {% if product.metafields.custom.country_of_origin %}
+                    <div class="product-detail">
+                      <strong>{{ 'products.product.country_of_origin' | t }}:</strong>
+                      <span>{{ product.metafields.custom.country_of_origin }}</span>
+                    </div>
+                  {% endif %}
+                  
+                  {% if product.metafields.custom.cultural_significance %}
+                    <div class="product-detail">
+                      <strong>{{ 'products.product.cultural_significance' | t }}:</strong>
+                      <span>{{ product.metafields.custom.cultural_significance }}</span>
+                    </div>
+                  {% endif %}
+                </div>
+              </div>
+
+              <!-- Care Instructions Tab -->
+              {% if product.metafields.custom.care_instructions %}
+                <div 
+                  x-show="activeTab === 'care'"
+                  class="product-tabs__panel"
+                  role="tabpanel"
+                  aria-labelledby="tab-btn-care"
+                  id="tab-care"
+                >
+                  <div class="product-care">
+                    {{ product.metafields.custom.care_instructions }}
+                  </div>
+                </div>
+              {% endif %}
+
+              <!-- Reviews Tab -->
+              <div 
+                x-show="activeTab === 'reviews'"
+                class="product-tabs__panel"
+                role="tabpanel"
+                aria-labelledby="tab-btn-reviews"
+                id="tab-reviews"
+              >
+                {% render 'product-reviews', product: product %}
+              </div>
+            </div>
+          </div>
+
+          <!-- Trust Badges -->
+          <div class="product-trust-badges">
+            <div class="trust-badge">
+              {% render 'icon', icon: 'shield' %}
+              <span>{{ 'products.product.trust.secure_payment' | t }}</span>
+            </div>
+            <div class="trust-badge">
+              {% render 'icon', icon: 'truck' %}
+              <span>{{ 'products.product.trust.free_shipping' | t }}</span>
+            </div>
+            <div class="trust-badge">
+              {% render 'icon', icon: 'return' %}
+              <span>{{ 'products.product.trust.easy_returns' | t }}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Related Products Section -->
+      {% render 'related-products', product: product, limit: 4 %}
+    </div>
+  </div>
+
+  <!-- Structured Data -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org/",
+    "@type": "Product",
+    "name": {{ product.title | json }},
+    "description": {{ product.description | strip_html | json }},
+    "image": [
+      {% for image in product.images limit: 5 %}
+        {{ image | image_url: width: 1200 | json }}{% unless forloop.last %},{% endunless %}
+      {% endfor %}
+    ],
+    "brand": {
+      "@type": "Brand",
+      "name": {{ shop.name | json }}
+    },
+    "offers": {
+      "@type": "Offer",
+      "url": {{ request.origin | append: product.url | json }},
+      "priceCurrency": {{ cart.currency.iso_code | json }},
+      "price": {{ product.price | divided_by: 100.0 | json }},
+      "priceValidUntil": "{{ 'now' | date: '%Y' | plus: 1 }}-12-31",
+      "availability": "https://schema.org/{% if product.available %}InStock{% else %}OutOfStock{% endif %}",
+      "seller": {
+        "@type": "Organization",
+        "name": {{ shop.name | json }}
+      }
+    }
+    {% if product.metafields.custom.material %},
+    "material": {{ product.metafields.custom.material | json }}
+    {% endif %}
+    {% if product.metafields.custom.country_of_origin %},
+    "countryOfOrigin": {{ product.metafields.custom.country_of_origin | json }}
+    {% endif %}
+  }
+  </script>
+</div>
+
+<!-- Notify When Available Modal -->
+{% render 'notify-modal' %}
+
+<style>
+  .product-page {
+    padding: var(--spacing-lg) 0;
+  }
+
+  .breadcrumb {
+    margin-bottom: var(--spacing-lg);
+  }
+
+  .breadcrumb__list {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--spacing-xs);
+    list-style: none;
+    margin: 0;
+    padding: 0;
+  }
+
+  .breadcrumb__item:not(:last-child)::after {
+    content: '›';
+    margin-left: var(--spacing-xs);
+    color: var(--color-text-secondary);
+  }
+
+  .breadcrumb__link {
+    color: var(--color-text-secondary);
+    text-decoration: none;
+    font-size: var(--font-size-sm);
+  }
+
+  .breadcrumb__link:hover {
+    color: var(--color-puce);
+  }
+
+  .breadcrumb__item--current {
+    color: var(--color-text-primary);
+    font-size: var(--font-size-sm);
+  }
+
+  .product-layout {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: var(--spacing-xl);
+    margin-bottom: var(--spacing-xxl);
+  }
+
+  @media (min-width: 768px) {
+    .product-layout {
+      grid-template-columns: 1fr 1fr;
+    }
+  }
+
+  .product-header {
+    margin-bottom: var(--spacing-lg);
+  }
+
+  .product-title {
+    font-family: var(--font-heading);
+    font-size: var(--font-size-xxl);
+    font-weight: var(--font-weight-bold);
+    color: var(--color-text-primary);
+    margin: 0 0 var(--spacing-md) 0;
+    line-height: 1.2;
+  }
+
+  .product-description {
+    margin-bottom: var(--spacing-lg);
+    line-height: 1.6;
+    color: var(--color-text-secondary);
+  }
+
+  .product-form-wrapper {
+    margin-bottom: var(--spacing-xl);
+  }
+
+  .product-tabs__nav {
+    display: flex;
+    border-bottom: 1px solid var(--color-border);
+    margin-bottom: var(--spacing-lg);
+  }
+
+  .product-tabs__btn {
+    background: none;
+    border: none;
+    padding: var(--spacing-md) var(--spacing-lg);
+    font-size: var(--font-size-base);
+    color: var(--color-text-secondary);
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
+    transition: all var(--transition-base);
+  }
+
+  .product-tabs__btn:hover {
+    color: var(--color-puce);
+  }
+
+  .product-tabs__btn--active {
+    color: var(--color-puce);
+    border-bottom-color: var(--color-puce);
+  }
+
+  .product-tabs__panel {
+    animation: fadeIn 0.3s ease-in-out;
+  }
+
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .product-details {
+    display: grid;
+    gap: var(--spacing-md);
+  }
+
+  .product-detail {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: var(--spacing-sm) 0;
+    border-bottom: 1px solid var(--color-border-light);
+  }
+
+  .product-detail:last-child {
+    border-bottom: none;
+  }
+
+  .product-care {
+    line-height: 1.6;
+    color: var(--color-text-secondary);
+  }
+
+  .product-trust-badges {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: var(--spacing-md);
+    margin-top: var(--spacing-xl);
+    padding: var(--spacing-lg);
+    background: var(--color-background-secondary);
+    border-radius: var(--border-radius-md);
+  }
+
+  .trust-badge {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-sm);
+    font-size: var(--font-size-sm);
+    color: var(--color-text-secondary);
+  }
+
+  .trust-badge svg {
+    width: 2rem;
+    height: 2rem;
+    color: var(--color-puce);
+  }
+
+
+
+  @media (max-width: 767px) {
+    .product-title {
+      font-size: var(--font-size-xl);
+    }
+    
+    .product-tabs__nav {
+      flex-wrap: wrap;
+    }
+    
+    .product-tabs__btn {
+      flex: 1;
+      min-width: 0;
+      padding: var(--spacing-sm) var(--spacing-md);
+      font-size: var(--font-size-sm);
+    }
+    
+    .product-trust-badges {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>

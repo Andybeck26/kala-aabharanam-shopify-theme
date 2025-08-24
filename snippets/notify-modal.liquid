@@ -1,0 +1,403 @@
+{% comment %}
+  Notify When Available Modal
+  Modal for collecting email addresses for out-of-stock product notifications
+{% endcomment %}
+
+<div 
+  class="notify-modal"
+  x-data="notifyModal()"
+  x-show="isOpen"
+  x-transition:enter="transition ease-out duration-300"
+  x-transition:enter-start="opacity-0"
+  x-transition:enter-end="opacity-100"
+  x-transition:leave="transition ease-in duration-200"
+  x-transition:leave-start="opacity-100"
+  x-transition:leave-end="opacity-0"
+  @notify-modal:open.window="openModal($event.detail)"
+  @keydown.escape.window="closeModal()"
+  style="display: none;"
+>
+  <div class="notify-modal__backdrop" @click="closeModal()"></div>
+  
+  <div class="notify-modal__content">
+    <div class="notify-modal__header">
+      <h3 class="notify-modal__title">
+        {{ 'products.product.notify.title' | t }}
+      </h3>
+      <button 
+        class="notify-modal__close"
+        @click="closeModal()"
+        aria-label="{{ 'general.accessibility.close' | t }}"
+      >
+        {% render 'icon', icon: 'x' %}
+      </button>
+    </div>
+
+    <div class="notify-modal__body">
+      <p class="notify-modal__description">
+        {{ 'products.product.notify.description' | t }}
+      </p>
+
+      <form 
+        class="notify-form"
+        @submit.prevent="submitNotification()"
+        x-show="!submitted"
+      >
+        <div class="form-field">
+          <label for="notify-email" class="form-label">
+            {{ 'general.newsletter.label' | t }}
+          </label>
+          <input 
+            type="email"
+            id="notify-email"
+            x-model="email"
+            class="form-input"
+            :class="{ 'form-input--error': emailError }"
+            required
+            autocomplete="email"
+            placeholder="{{ 'products.product.notify.email_placeholder' | t }}"
+          >
+          <div x-show="emailError" class="form-error" x-text="emailError"></div>
+        </div>
+
+        <div class="form-field">
+          <label class="form-checkbox">
+            <input 
+              type="checkbox"
+              x-model="agreeToMarketing"
+              class="form-checkbox__input"
+            >
+            <span class="form-checkbox__label">
+              {{ 'products.product.notify.marketing_consent' | t }}
+            </span>
+          </label>
+        </div>
+
+        <div class="notify-form__actions">
+          <button 
+            type="submit"
+            class="btn btn--primary btn--large"
+            :disabled="loading || !email"
+            :class="{ 'btn--loading': loading }"
+          >
+            <span x-show="!loading">
+              {{ 'products.product.notify.submit' | t }}
+            </span>
+            <span x-show="loading" class="btn__loading">
+              <div class="loading-spinner loading-spinner--small"></div>
+              {{ 'accessibility.loading' | t }}
+            </span>
+          </button>
+          
+          <button 
+            type="button"
+            class="btn btn--secondary"
+            @click="closeModal()"
+          >
+            {{ 'general.cancel' | t }}
+          </button>
+        </div>
+      </form>
+
+      <!-- Success message -->
+      <div x-show="submitted" class="notify-success">
+        <div class="notify-success__icon">
+          {% render 'icon', icon: 'check-circle' %}
+        </div>
+        <h4 class="notify-success__title">
+          {{ 'products.product.notify.success_title' | t }}
+        </h4>
+        <p class="notify-success__message">
+          {{ 'products.product.notify.success_message' | t }}
+        </p>
+        <button 
+          class="btn btn--primary"
+          @click="closeModal()"
+        >
+          {{ 'general.continue_shopping' | t }}
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  function notifyModal() {
+    return {
+      isOpen: false,
+      email: '',
+      agreeToMarketing: false,
+      loading: false,
+      submitted: false,
+      emailError: '',
+      currentProduct: null,
+      currentVariant: null,
+
+      openModal(data) {
+        this.currentProduct = data.product;
+        this.currentVariant = data.variant;
+        this.isOpen = true;
+        this.submitted = false;
+        this.email = '';
+        this.agreeToMarketing = false;
+        this.emailError = '';
+        
+        // Focus on email input after modal opens
+        this.$nextTick(() => {
+          document.getElementById('notify-email')?.focus();
+        });
+        
+        // Prevent body scroll
+        document.body.style.overflow = 'hidden';
+      },
+
+      closeModal() {
+        this.isOpen = false;
+        document.body.style.overflow = '';
+      },
+
+      validateEmail() {
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!this.email) {
+          this.emailError = '{{ "products.product.notify.email_required" | t }}';
+          return false;
+        }
+        if (!emailRegex.test(this.email)) {
+          this.emailError = '{{ "products.product.notify.email_invalid" | t }}';
+          return false;
+        }
+        this.emailError = '';
+        return true;
+      },
+
+      async submitNotification() {
+        if (!this.validateEmail()) return;
+
+        this.loading = true;
+
+        try {
+          // Submit to Shopify's customer notification system
+          const response = await fetch('/contact', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/x-www-form-urlencoded',
+            },
+            body: new URLSearchParams({
+              'form_type': 'customer',
+              'utf8': '✓',
+              'contact[email]': this.email,
+              'contact[subject]': `Notify when available: ${this.currentProduct?.title}`,
+              'contact[body]': `Please notify me when "${this.currentProduct?.title}" (Variant: ${this.currentVariant?.title}) becomes available again.`,
+              'contact[tags]': 'notify-when-available',
+              'marketing_consent': this.agreeToMarketing ? 'true' : 'false'
+            })
+          });
+
+          if (response.ok) {
+            this.submitted = true;
+            
+            // Track the notification request
+            if (typeof gtag !== 'undefined') {
+              gtag('event', 'notify_when_available', {
+                'event_category': 'engagement',
+                'event_label': this.currentProduct?.title,
+                'value': 1
+              });
+            }
+          } else {
+            throw new Error('Failed to submit notification request');
+          }
+        } catch (error) {
+          console.error('Notification error:', error);
+          this.emailError = '{{ "products.product.notify.error_message" | t }}';
+        } finally {
+          this.loading = false;
+        }
+      }
+    }
+  }
+</script>
+
+<style>
+  .notify-modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 1000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: var(--spacing-lg);
+  }
+
+  .notify-modal__backdrop {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.7);
+  }
+
+  .notify-modal__content {
+    position: relative;
+    background: white;
+    border-radius: var(--border-radius-lg);
+    box-shadow: var(--shadow-xl);
+    max-width: 500px;
+    width: 100%;
+    max-height: 90vh;
+    overflow-y: auto;
+  }
+
+  .notify-modal__header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: var(--spacing-lg);
+    border-bottom: 1px solid var(--color-border);
+  }
+
+  .notify-modal__title {
+    font-family: var(--font-heading);
+    font-size: var(--font-size-lg);
+    margin: 0;
+    color: var(--color-text-primary);
+  }
+
+  .notify-modal__close {
+    background: none;
+    border: none;
+    padding: var(--spacing-xs);
+    cursor: pointer;
+    border-radius: var(--border-radius-sm);
+    transition: background-color var(--transition-base);
+  }
+
+  .notify-modal__close:hover {
+    background: var(--color-background-secondary);
+  }
+
+  .notify-modal__close svg {
+    width: 2rem;
+    height: 2rem;
+    color: var(--color-text-secondary);
+  }
+
+  .notify-modal__body {
+    padding: var(--spacing-lg);
+  }
+
+  .notify-modal__description {
+    margin-bottom: var(--spacing-lg);
+    color: var(--color-text-secondary);
+    line-height: 1.6;
+  }
+
+  .notify-form__actions {
+    display: flex;
+    gap: var(--spacing-md);
+    margin-top: var(--spacing-lg);
+  }
+
+  .notify-form__actions .btn {
+    flex: 1;
+  }
+
+  .notify-success {
+    text-align: center;
+  }
+
+  .notify-success__icon {
+    margin-bottom: var(--spacing-lg);
+  }
+
+  .notify-success__icon svg {
+    width: 4rem;
+    height: 4rem;
+    color: var(--color-success);
+  }
+
+  .notify-success__title {
+    font-size: var(--font-size-lg);
+    margin-bottom: var(--spacing-md);
+    color: var(--color-text-primary);
+  }
+
+  .notify-success__message {
+    margin-bottom: var(--spacing-lg);
+    color: var(--color-text-secondary);
+    line-height: 1.6;
+  }
+
+  .form-field {
+    margin-bottom: var(--spacing-lg);
+  }
+
+  .form-label {
+    display: block;
+    margin-bottom: var(--spacing-sm);
+    font-weight: var(--font-weight-medium);
+    color: var(--color-text-primary);
+  }
+
+  .form-input {
+    width: 100%;
+    padding: var(--spacing-md);
+    border: 1px solid var(--color-border);
+    border-radius: var(--border-radius-sm);
+    font-size: var(--font-size-base);
+    transition: border-color var(--transition-base);
+  }
+
+  .form-input:focus {
+    outline: none;
+    border-color: var(--color-puce);
+    box-shadow: 0 0 0 2px rgba(199, 21, 133, 0.1);
+  }
+
+  .form-input--error {
+    border-color: var(--color-error);
+  }
+
+  .form-error {
+    margin-top: var(--spacing-xs);
+    color: var(--color-error);
+    font-size: var(--font-size-sm);
+  }
+
+  .form-checkbox {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--spacing-sm);
+    cursor: pointer;
+  }
+
+  .form-checkbox__input {
+    margin-top: 2px;
+  }
+
+  .form-checkbox__label {
+    font-size: var(--font-size-sm);
+    color: var(--color-text-secondary);
+    line-height: 1.5;
+  }
+
+  /* Responsive adjustments */
+  @media (max-width: 767px) {
+    .notify-modal {
+      padding: var(--spacing-md);
+    }
+
+    .notify-modal__header,
+    .notify-modal__body {
+      padding: var(--spacing-md);
+    }
+
+    .notify-form__actions {
+      flex-direction: column;
+    }
+  }
+</style>

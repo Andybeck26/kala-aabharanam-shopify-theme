@@ -1,0 +1,222 @@
+{% comment %}
+  Product Card Component
+  Displays product information in a grid layout with image optimization
+  Parameters:
+  - product: Product object
+  - collection: Collection object (optional)
+  - image_ratio: Image aspect ratio (optional)
+  - show_secondary_image: Show hover image (optional)
+  - show_vendor: Show product vendor (optional)
+  - show_rating: Show product rating (optional)
+{% endcomment %}
+
+{% assign product_url = product.url %}
+{% if collection %}
+  {% assign product_url = product.url | within: collection %}
+{% endif %}
+
+<article class="product-card" x-data="productCard()">
+  <div class="product-card__container">
+    <!-- Product Image -->
+    <div class="product-card__image-wrapper{% if image_ratio %} product-card__image-wrapper--{{ image_ratio }}{% endif %}">
+      <a href="{{ product_url }}" class="product-card__image-link" aria-label="View {{ product.title }}">
+        {% render 'responsive-image',
+          image: product.featured_image,
+          alt: product.title,
+          class: 'product-card__image',
+          loading: 'lazy',
+          width: 300,
+          height: 300,
+          aspect_ratio: '1'
+        %}
+        
+        <!-- Hover Image (second image if available) -->
+        {% if show_secondary_image and product.images.size > 1 %}
+          {% render 'responsive-image',
+            image: product.images[1],
+            alt: product.title,
+            class: 'product-card__image product-card__image--hover',
+            loading: 'lazy',
+            width: 300,
+            height: 300,
+            aspect_ratio: '1'
+          %}
+        {% endif %}
+
+        <!-- Sale Badge -->
+        {% if product.compare_at_price > product.price %}
+          <span class="product-card__badge product-card__badge--sale">
+            Sale
+          </span>
+        {% endif %}
+
+        <!-- New Badge (products created in last 30 days) -->
+        {% assign days_since_created = 'now' | date: '%s' | minus: product.created_at | date: '%s' | divided_by: 86400 %}
+        {% if days_since_created <= 30 %}
+          <span class="product-card__badge product-card__badge--new">
+            New
+          </span>
+        {% endif %}
+      </a>
+
+      <!-- Quick View Button -->
+      <button 
+        class="product-card__quick-view"
+        @click="openQuickView('{{ product.id }}')"
+        aria-label="Quick view {{ product.title }}"
+      >
+        {% render 'icon', icon: 'eye' %}
+        Quick View
+      </button>
+
+      <!-- Wishlist Button (placeholder for future implementation) -->
+      <button 
+        class="product-card__wishlist"
+        @click="toggleWishlist('{{ product.id }}')"
+        aria-label="Add {{ product.title }} to wishlist"
+      >
+        {% render 'icon', icon: 'heart' %}
+      </button>
+    </div>
+
+    <!-- Product Information -->
+    <div class="product-card__info">
+      <!-- Product Title -->
+      <h3 class="product-card__title">
+        <a href="{{ product_url }}" class="product-card__title-link">
+          {{ product.title }}
+        </a>
+      </h3>
+
+      <!-- Product Vendor (if available) -->
+      {% if show_vendor and product.vendor != blank and product.vendor != 'Kala Aabharanam' %}
+        <div class="product-card__vendor">
+          {{ product.vendor }}
+        </div>
+      {% endif %}
+
+      <!-- Product Price -->
+      <div class="product-card__price">
+        {% render 'price', product: product %}
+      </div>
+
+      <!-- Product Variants (color swatches if available) -->
+      {% if product.options contains 'Color' and product.variants.size > 1 %}
+        <div class="product-card__variants">
+          {% assign color_option_index = product.options | map: 'downcase' | where: 'color' | first %}
+          {% if color_option_index %}
+            <div class="product-card__colors">
+              {% assign displayed_colors = '' %}
+              {% for variant in product.variants limit: 5 %}
+                {% assign color = variant.option1 %}
+                {% if product.options[0] != 'Color' %}
+                  {% assign color = variant.option2 %}
+                  {% if product.options[1] != 'Color' %}
+                    {% assign color = variant.option3 %}
+                  {% endif %}
+                {% endif %}
+                
+                {% unless displayed_colors contains color %}
+                  {% assign displayed_colors = displayed_colors | append: color | append: ',' %}
+                  <span 
+                    class="product-card__color-swatch" 
+                    style="background-color: {{ color | downcase | replace: ' ', '' }}"
+                    title="{{ color }}"
+                  ></span>
+                {% endunless %}
+              {% endfor %}
+              
+              {% if product.variants.size > 5 %}
+                <span class="product-card__color-more">+{{ product.variants.size | minus: 5 }}</span>
+              {% endif %}
+            </div>
+          {% endif %}
+        </div>
+      {% endif %}
+
+      <!-- Product Rating (placeholder for review integration) -->
+      {% if show_rating %}
+        <div class="product-card__rating">
+          <!-- Will be populated by review app integration -->
+          <div class="rating-placeholder">
+            <span class="sr-only">Product rating will appear here</span>
+          </div>
+        </div>
+      {% endif %}
+
+      <!-- Add to Cart Button -->
+      {% if product.available %}
+        {% if product.variants.size == 1 %}
+          <button 
+            class="product-card__add-to-cart btn btn--primary btn--small"
+            @click="addToCart('{{ product.variants.first.id }}')"
+            :disabled="loading"
+          >
+            <span x-show="!loading">Add to Cart</span>
+            <span x-show="loading">Adding...</span>
+          </button>
+        {% else %}
+          <a href="{{ product_url }}" class="product-card__select-options btn btn--secondary btn--small">
+            Select Options
+          </a>
+        {% endif %}
+      {% else %}
+        <button class="product-card__sold-out btn btn--disabled btn--small" disabled>
+          Sold Out
+        </button>
+      {% endif %}
+    </div>
+  </div>
+</article>
+
+<script>
+  function productCard() {
+    return {
+      loading: false,
+
+      async addToCart(variantId) {
+        this.loading = true;
+        
+        try {
+          const response = await fetch('/cart/add.js', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              id: variantId,
+              quantity: 1
+            })
+          });
+
+          if (response.ok) {
+            // Dispatch cart update event
+            this.$dispatch('cart:updated');
+            this.$dispatch('cart:open');
+          } else {
+            throw new Error('Failed to add to cart');
+          }
+        } catch (error) {
+          console.error('Add to cart error:', error);
+          // Show error message to user
+          this.$dispatch('notification:show', {
+            type: 'error',
+            message: 'Unable to add item to cart. Please try again.'
+          });
+        } finally {
+          this.loading = false;
+        }
+      },
+
+      openQuickView(productId) {
+        // Quick view functionality will be implemented later
+        this.$dispatch('quickview:open', { productId });
+      },
+
+      toggleWishlist(productId) {
+        // Wishlist functionality placeholder
+        this.$dispatch('wishlist:toggle', { productId });
+      }
+    }
+  }
+</script>

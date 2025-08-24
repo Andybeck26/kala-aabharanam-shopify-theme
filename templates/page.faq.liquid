@@ -1,0 +1,693 @@
+{% comment %}
+  FAQ page template for Kala Aabharanam
+  Displays frequently asked questions with search and category filtering
+{% endcomment %}
+
+<div class="faq-page" x-data="faqManager()">
+  <div class="container">
+    <!-- FAQ Header -->
+    <header class="faq-header">
+      <h1 class="faq-title">{{ page.title | default: 'Frequently Asked Questions' }}</h1>
+      {% if page.content != blank %}
+        <div class="faq-description">
+          {{ page.content }}
+        </div>
+      {% endif %}
+    </header>
+
+    <!-- FAQ Search -->
+    <div class="faq-search">
+      <div class="faq-search__container">
+        <input type="text" 
+               x-model="searchQuery"
+               @input="searchFAQs()"
+               placeholder="Search for answers..."
+               class="faq-search__input"
+               aria-label="Search FAQs">
+        <button class="faq-search__button" @click="searchFAQs()">
+          {% render 'icon', icon: 'search' %}
+        </button>
+      </div>
+      <div class="faq-search__results" x-show="searchQuery && searchResults.length === 0">
+        <p>No results found for "<span x-text="searchQuery"></span>". Try different keywords.</p>
+      </div>
+    </div>
+
+    <!-- FAQ Categories -->
+    <nav class="faq-categories" aria-label="FAQ categories">
+      <ul class="faq-categories__list">
+        <li class="faq-categories__item">
+          <button @click="filterByCategory('all')" 
+                  :class="{ 'faq-categories__button--active': activeCategory === 'all' }"
+                  class="faq-categories__button">
+            All Questions
+          </button>
+        </li>
+        <li class="faq-categories__item">
+          <button @click="filterByCategory('orders')" 
+                  :class="{ 'faq-categories__button--active': activeCategory === 'orders' }"
+                  class="faq-categories__button">
+            Orders & Shipping
+          </button>
+        </li>
+        <li class="faq-categories__item">
+          <button @click="filterByCategory('products')" 
+                  :class="{ 'faq-categories__button--active': activeCategory === 'products' }"
+                  class="faq-categories__button">
+            Products & Quality
+          </button>
+        </li>
+        <li class="faq-categories__item">
+          <button @click="filterByCategory('returns')" 
+                  :class="{ 'faq-categories__button--active': activeCategory === 'returns' }"
+                  class="faq-categories__button">
+            Returns & Exchanges
+          </button>
+        </li>
+        <li class="faq-categories__item">
+          <button @click="filterByCategory('care')" 
+                  :class="{ 'faq-categories__button--active': activeCategory === 'care' }"
+                  class="faq-categories__button">
+            Care Instructions
+          </button>
+        </li>
+        <li class="faq-categories__item">
+          <button @click="filterByCategory('account')" 
+                  :class="{ 'faq-categories__button--active': activeCategory === 'account' }"
+                  class="faq-categories__button">
+            Account & Payment
+          </button>
+        </li>
+      </ul>
+    </nav>
+
+    <!-- FAQ Content -->
+    <div class="faq-content">
+      <template x-for="(faq, index) in filteredFAQs" :key="faq.id">
+        <div class="faq-item" 
+             :data-category="faq.category"
+             x-show="shouldShowFAQ(faq)"
+             x-transition>
+          <button class="faq-item__question" 
+                  @click="toggleFAQ(faq.id)"
+                  :aria-expanded="openFAQs.includes(faq.id)"
+                  :aria-controls="'faq-answer-' + faq.id">
+            <span class="faq-item__question-text" x-html="highlightSearchTerm(faq.question)"></span>
+            <span class="faq-item__icon" 
+                  :class="{ 'faq-item__icon--open': openFAQs.includes(faq.id) }">
+              {% render 'icon', icon: 'caret' %}
+            </span>
+          </button>
+          
+          <div class="faq-item__answer" 
+               :id="'faq-answer-' + faq.id"
+               x-show="openFAQs.includes(faq.id)"
+               x-collapse>
+            <div class="faq-item__answer-content" x-html="highlightSearchTerm(faq.answer)"></div>
+            
+            <!-- Helpful Actions -->
+            <div class="faq-item__actions">
+              <p class="faq-item__helpful-text">Was this helpful?</p>
+              <div class="faq-item__helpful-buttons">
+                <button @click="markHelpful(faq.id, true)" 
+                        class="faq-item__helpful-btn faq-item__helpful-btn--yes">
+                  {% render 'icon', icon: 'check' %}
+                  Yes
+                </button>
+                <button @click="markHelpful(faq.id, false)" 
+                        class="faq-item__helpful-btn faq-item__helpful-btn--no">
+                  {% render 'icon', icon: 'x' %}
+                  No
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </template>
+
+      <!-- No Results Message -->
+      <div class="faq-no-results" x-show="filteredFAQs.length === 0">
+        <h3>No questions found</h3>
+        <p>Try adjusting your search terms or browse different categories.</p>
+        <button @click="clearSearch()" class="faq-no-results__clear">
+          Clear Search
+        </button>
+      </div>
+    </div>
+
+    <!-- Contact Support -->
+    <div class="faq-contact">
+      <h3 class="faq-contact__title">Still need help?</h3>
+      <p class="faq-contact__description">
+        Can't find the answer you're looking for? Our customer support team is here to help.
+      </p>
+      <div class="faq-contact__actions">
+        <a href="/pages/contact" class="faq-contact__button faq-contact__button--primary">
+          Contact Support
+        </a>
+        <a href="mailto:support@kalaaabharanam.com" class="faq-contact__button faq-contact__button--secondary">
+          Email Us
+        </a>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  function faqManager() {
+    return {
+      searchQuery: '',
+      activeCategory: 'all',
+      openFAQs: [],
+      searchResults: [],
+      
+      // FAQ Data - In real implementation, this would come from Shopify metafields
+      faqs: [
+        // Orders & Shipping
+        {
+          id: 1,
+          category: 'orders',
+          question: 'How long does shipping take?',
+          answer: 'We offer multiple shipping options:<br><br><strong>Standard Shipping (5-7 business days):</strong> Free for orders over ₹999<br><strong>Express Shipping (2-3 business days):</strong> ₹99<br><strong>Same Day Delivery:</strong> Available in select cities for ₹199<br><br>All orders are processed within 24 hours on business days.'
+        },
+        {
+          id: 2,
+          category: 'orders',
+          question: 'Do you ship internationally?',
+          answer: 'Currently, we only ship within India. We are working on expanding our international shipping options and will update our customers once available.'
+        },
+        {
+          id: 3,
+          category: 'orders',
+          question: 'How can I track my order?',
+          answer: 'Once your order is shipped, you will receive a tracking number via email and SMS. You can also track your order by logging into your account and visiting the "Order History" section.'
+        },
+        {
+          id: 4,
+          category: 'orders',
+          question: 'Can I change or cancel my order?',
+          answer: 'You can modify or cancel your order within 2 hours of placing it. After this time, the order enters our fulfillment process and cannot be changed. Please contact our support team immediately if you need to make changes.'
+        },
+
+        // Products & Quality
+        {
+          id: 5,
+          category: 'products',
+          question: 'Are your jewellery pieces made of real gold?',
+          answer: 'Our artificial jewellery is made with high-quality gold-plated brass and copper alloys. While not solid gold, our pieces are crafted to provide the luxurious look and feel of traditional gold jewellery at an affordable price point.'
+        },
+        {
+          id: 6,
+          category: 'products',
+          question: 'What is Kalamkari and how is it made?',
+          answer: 'Kalamkari is a traditional Indian art form involving hand-painting or block-printing on cotton textiles. Our Kalamkari pieces are created by skilled artisans using natural dyes and traditional techniques, making each piece unique with slight variations that add to their authentic charm.'
+        },
+        {
+          id: 7,
+          category: 'products',
+          question: 'Do you offer customization services?',
+          answer: 'Yes! We offer customization for select jewellery pieces including size adjustments, color variations, and personalized engravings. Customization typically adds 3-5 business days to processing time and may incur additional charges.'
+        },
+        {
+          id: 8,
+          category: 'products',
+          question: 'How do I choose the right size for jewellery?',
+          answer: 'Each product page includes detailed size charts and measurement guides. For necklaces, we provide length measurements. For rings and bangles, we offer size conversion charts. If you\'re unsure, our customer service team can help you choose the perfect fit.'
+        },
+
+        // Returns & Exchanges
+        {
+          id: 9,
+          category: 'returns',
+          question: 'What is your return policy?',
+          answer: 'We offer a 30-day return policy for unworn items in original condition with tags attached. Custom or personalized items cannot be returned unless defective. Return shipping is free for defective items; customer pays return shipping for other returns.'
+        },
+        {
+          id: 10,
+          category: 'returns',
+          question: 'How do I initiate a return or exchange?',
+          answer: 'To start a return:<br>1. Log into your account and go to Order History<br>2. Select the order and click "Return Items"<br>3. Choose items to return and reason<br>4. Print the prepaid return label<br>5. Pack items securely and ship back<br><br>Refunds are processed within 5-7 business days after we receive your return.'
+        },
+        {
+          id: 11,
+          category: 'returns',
+          question: 'Can I exchange an item for a different size or color?',
+          answer: 'Yes, exchanges are available for the same product in different sizes or colors, subject to availability. The exchange process is the same as returns, but please select "Exchange" as your reason and specify your preferred replacement.'
+        },
+
+        // Care Instructions
+        {
+          id: 12,
+          category: 'care',
+          question: 'How should I care for my artificial jewellery?',
+          answer: 'To maintain your jewellery:<br><br><strong>Storage:</strong> Keep in a dry place, preferably in individual pouches<br><strong>Cleaning:</strong> Use a soft, dry cloth to clean after each use<br><strong>Avoid:</strong> Water, perfumes, lotions, and harsh chemicals<br><strong>Wearing:</strong> Put on jewellery last when getting ready and remove first when undressing'
+        },
+        {
+          id: 13,
+          category: 'care',
+          question: 'How do I wash Kalamkari garments?',
+          answer: 'Kalamkari garments require gentle care:<br><br><strong>First Wash:</strong> Dry clean recommended<br><strong>Subsequent Washes:</strong> Hand wash in cold water with mild detergent<br><strong>Drying:</strong> Air dry in shade, avoid direct sunlight<br><strong>Ironing:</strong> Use low heat and iron on reverse side<br><strong>Storage:</strong> Store in breathable cotton bags'
+        },
+        {
+          id: 14,
+          category: 'care',
+          question: 'My jewellery is tarnishing. What should I do?',
+          answer: 'Some tarnishing is natural with artificial jewellery. To minimize:<br><br>• Clean regularly with a soft cloth<br>• Store in airtight containers with silica gel packets<br>• Avoid exposure to moisture and chemicals<br><br>For light tarnishing, gently clean with a jewellery cleaning cloth. If tarnishing is severe within the first 30 days, contact us for a replacement.'
+        },
+
+        // Account & Payment
+        {
+          id: 15,
+          category: 'account',
+          question: 'How do I create an account?',
+          answer: 'Creating an account is easy:<br>1. Click "Account" in the top navigation<br>2. Select "Create Account"<br>3. Fill in your details (name, email, password)<br>4. Verify your email address<br><br>Having an account allows you to track orders, save addresses, view purchase history, and receive exclusive offers.'
+        },
+        {
+          id: 16,
+          category: 'account',
+          question: 'What payment methods do you accept?',
+          answer: 'We accept all major payment methods:<br><br><strong>Credit/Debit Cards:</strong> Visa, Mastercard, RuPay, American Express<br><strong>Digital Wallets:</strong> Paytm, PhonePe, Google Pay<br><strong>Net Banking:</strong> All major Indian banks<br><strong>UPI:</strong> All UPI-enabled apps<br><strong>EMI:</strong> Available on orders above ₹3,000'
+        },
+        {
+          id: 17,
+          category: 'account',
+          question: 'Is my payment information secure?',
+          answer: 'Absolutely. We use industry-standard SSL encryption and partner with trusted payment gateways like Razorpay and PayU. We never store your complete card details on our servers. All transactions are processed through secure, PCI DSS compliant systems.'
+        },
+        {
+          id: 18,
+          category: 'account',
+          question: 'I forgot my password. How do I reset it?',
+          answer: 'To reset your password:<br>1. Go to the login page<br>2. Click "Forgot Password?"<br>3. Enter your registered email address<br>4. Check your email for reset instructions<br>5. Follow the link to create a new password<br><br>If you don\'t receive the email within 10 minutes, check your spam folder or contact support.'
+        }
+      ],
+
+      get filteredFAQs() {
+        let filtered = this.faqs;
+        
+        // Filter by category
+        if (this.activeCategory !== 'all') {
+          filtered = filtered.filter(faq => faq.category === this.activeCategory);
+        }
+        
+        // Filter by search query
+        if (this.searchQuery.trim()) {
+          const query = this.searchQuery.toLowerCase();
+          filtered = filtered.filter(faq => 
+            faq.question.toLowerCase().includes(query) || 
+            faq.answer.toLowerCase().includes(query)
+          );
+        }
+        
+        return filtered;
+      },
+
+      filterByCategory(category) {
+        this.activeCategory = category;
+        this.searchQuery = '';
+      },
+
+      searchFAQs() {
+        // Search is handled by the computed filteredFAQs property
+        // This method can be used for additional search logic if needed
+      },
+
+      toggleFAQ(faqId) {
+        const index = this.openFAQs.indexOf(faqId);
+        if (index > -1) {
+          this.openFAQs.splice(index, 1);
+        } else {
+          this.openFAQs.push(faqId);
+        }
+      },
+
+      shouldShowFAQ(faq) {
+        return this.filteredFAQs.includes(faq);
+      },
+
+      highlightSearchTerm(text) {
+        if (!this.searchQuery.trim()) return text;
+        
+        const regex = new RegExp(`(${this.searchQuery})`, 'gi');
+        return text.replace(regex, '<mark>$1</mark>');
+      },
+
+      markHelpful(faqId, isHelpful) {
+        // In a real implementation, this would send data to analytics
+        console.log(`FAQ ${faqId} marked as ${isHelpful ? 'helpful' : 'not helpful'}`);
+        
+        // Show feedback message
+        const message = isHelpful ? 'Thank you for your feedback!' : 'We\'ll work on improving this answer.';
+        alert(message);
+      },
+
+      clearSearch() {
+        this.searchQuery = '';
+        this.activeCategory = 'all';
+      }
+    }
+  }
+</script>
+
+<style>
+  .faq-page {
+    padding: 2rem 0;
+  }
+
+  .faq-header {
+    text-align: center;
+    margin-bottom: 3rem;
+  }
+
+  .faq-title {
+    font-family: var(--font-heading);
+    font-size: 2.5rem;
+    color: var(--color-primary);
+    margin-bottom: 1rem;
+  }
+
+  .faq-description {
+    font-size: 1.1rem;
+    color: var(--color-text);
+    max-width: 600px;
+    margin: 0 auto;
+  }
+
+  .faq-search {
+    margin-bottom: 2rem;
+  }
+
+  .faq-search__container {
+    position: relative;
+    max-width: 500px;
+    margin: 0 auto;
+  }
+
+  .faq-search__input {
+    width: 100%;
+    padding: 1rem 3rem 1rem 1rem;
+    border: 2px solid var(--color-secondary);
+    border-radius: 25px;
+    font-size: 1rem;
+    outline: none;
+    transition: border-color 0.3s ease;
+  }
+
+  .faq-search__input:focus {
+    border-color: var(--color-primary);
+  }
+
+  .faq-search__button {
+    position: absolute;
+    right: 0.5rem;
+    top: 50%;
+    transform: translateY(-50%);
+    background: var(--color-primary);
+    color: white;
+    border: none;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .faq-search__results {
+    text-align: center;
+    margin-top: 1rem;
+    color: var(--color-text);
+  }
+
+  .faq-categories {
+    margin-bottom: 2rem;
+  }
+
+  .faq-categories__list {
+    display: flex;
+    justify-content: center;
+    gap: 1rem;
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    flex-wrap: wrap;
+  }
+
+  .faq-categories__button {
+    padding: 0.75rem 1.5rem;
+    border: 2px solid var(--color-secondary);
+    border-radius: 25px;
+    background: white;
+    color: var(--color-text);
+    cursor: pointer;
+    transition: all 0.3s ease;
+    font-weight: 500;
+    white-space: nowrap;
+  }
+
+  .faq-categories__button:hover,
+  .faq-categories__button--active {
+    background-color: var(--color-primary);
+    color: white;
+    border-color: var(--color-primary);
+  }
+
+  .faq-content {
+    max-width: 800px;
+    margin: 0 auto;
+  }
+
+  .faq-item {
+    border: 1px solid var(--color-background);
+    border-radius: 8px;
+    margin-bottom: 1rem;
+    overflow: hidden;
+    background: white;
+  }
+
+  .faq-item__question {
+    width: 100%;
+    padding: 1.5rem;
+    background: none;
+    border: none;
+    text-align: left;
+    cursor: pointer;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: var(--color-primary);
+    transition: background-color 0.3s ease;
+  }
+
+  .faq-item__question:hover {
+    background-color: var(--color-background);
+  }
+
+  .faq-item__question-text {
+    flex: 1;
+    text-align: left;
+  }
+
+  .faq-item__icon {
+    margin-left: 1rem;
+    transition: transform 0.3s ease;
+    color: var(--color-secondary);
+  }
+
+  .faq-item__icon--open {
+    transform: rotate(180deg);
+  }
+
+  .faq-item__answer {
+    border-top: 1px solid var(--color-background);
+  }
+
+  .faq-item__answer-content {
+    padding: 1.5rem;
+    color: var(--color-text);
+    line-height: 1.6;
+  }
+
+  .faq-item__actions {
+    padding: 1rem 1.5rem;
+    border-top: 1px solid var(--color-background);
+    background-color: #fafafa;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+  }
+
+  .faq-item__helpful-text {
+    margin: 0;
+    font-size: 0.9rem;
+    color: var(--color-text);
+  }
+
+  .faq-item__helpful-buttons {
+    display: flex;
+    gap: 0.5rem;
+  }
+
+  .faq-item__helpful-btn {
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+    padding: 0.5rem 1rem;
+    border: 1px solid var(--color-secondary);
+    border-radius: 20px;
+    background: white;
+    color: var(--color-text);
+    cursor: pointer;
+    font-size: 0.9rem;
+    transition: all 0.3s ease;
+  }
+
+  .faq-item__helpful-btn--yes:hover {
+    background-color: #10b981;
+    color: white;
+    border-color: #10b981;
+  }
+
+  .faq-item__helpful-btn--no:hover {
+    background-color: #ef4444;
+    color: white;
+    border-color: #ef4444;
+  }
+
+  .faq-no-results {
+    text-align: center;
+    padding: 3rem 0;
+  }
+
+  .faq-no-results h3 {
+    color: var(--color-primary);
+    margin-bottom: 1rem;
+  }
+
+  .faq-no-results p {
+    color: var(--color-text);
+    margin-bottom: 2rem;
+  }
+
+  .faq-no-results__clear {
+    background: var(--color-primary);
+    color: white;
+    border: none;
+    padding: 0.75rem 1.5rem;
+    border-radius: 25px;
+    cursor: pointer;
+  }
+
+  .faq-contact {
+    background: var(--color-background);
+    padding: 3rem;
+    border-radius: 12px;
+    text-align: center;
+    margin-top: 3rem;
+  }
+
+  .faq-contact__title {
+    font-family: var(--font-heading);
+    font-size: 1.5rem;
+    color: var(--color-primary);
+    margin-bottom: 1rem;
+  }
+
+  .faq-contact__description {
+    color: var(--color-text);
+    margin-bottom: 2rem;
+    max-width: 500px;
+    margin-left: auto;
+    margin-right: auto;
+  }
+
+  .faq-contact__actions {
+    display: flex;
+    justify-content: center;
+    gap: 1rem;
+    flex-wrap: wrap;
+  }
+
+  .faq-contact__button {
+    padding: 1rem 2rem;
+    border-radius: 25px;
+    text-decoration: none;
+    font-weight: 500;
+    transition: all 0.3s ease;
+  }
+
+  .faq-contact__button--primary {
+    background: var(--color-primary);
+    color: white;
+    border: 2px solid var(--color-primary);
+  }
+
+  .faq-contact__button--primary:hover {
+    background: var(--color-accent);
+    border-color: var(--color-accent);
+  }
+
+  .faq-contact__button--secondary {
+    background: white;
+    color: var(--color-primary);
+    border: 2px solid var(--color-primary);
+  }
+
+  .faq-contact__button--secondary:hover {
+    background: var(--color-primary);
+    color: white;
+  }
+
+  /* Search highlighting */
+  mark {
+    background-color: #fef08a;
+    color: inherit;
+    padding: 0.1em 0.2em;
+    border-radius: 2px;
+  }
+
+  @media (max-width: 768px) {
+    .faq-title {
+      font-size: 2rem;
+    }
+
+    .faq-categories__list {
+      justify-content: flex-start;
+      overflow-x: auto;
+      padding-bottom: 0.5rem;
+    }
+
+    .faq-item__question {
+      padding: 1rem;
+      font-size: 1rem;
+    }
+
+    .faq-item__answer-content {
+      padding: 1rem;
+    }
+
+    .faq-item__actions {
+      padding: 1rem;
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 0.5rem;
+    }
+
+    .faq-contact {
+      padding: 2rem 1rem;
+    }
+
+    .faq-contact__actions {
+      flex-direction: column;
+      align-items: center;
+    }
+
+    .faq-contact__button {
+      width: 100%;
+      max-width: 300px;
+    }
+  }
+</style>

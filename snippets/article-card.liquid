@@ -1,0 +1,88 @@
+{% comment %}
+  Article Card Component
+  Displays blog article information in search results
+  Parameters:
+  - article: Article object
+  - show_search_highlight: Show search term highlighting (optional)
+{% endcomment %}
+
+<article class="article-card">
+  <div class="article-card__container">
+    <!-- Article Image -->
+    {% if article.image %}
+      <div class="article-card__image-wrapper">
+        <a href="{{ article.url }}" class="article-card__image-link">
+          <img
+            src="{{ article.image | image_url: width: 300 }}"
+            srcset="{{ article.image | image_url: width: 300 }} 300w,
+                    {{ article.image | image_url: width: 600 }} 600w"
+            sizes="(min-width: 768px) 300px, 100vw"
+            alt="{{ article.image.alt | default: article.title }}"
+            class="article-card__image"
+            loading="lazy"
+            width="300"
+            height="200"
+          >
+        </a>
+      </div>
+    {% endif %}
+
+    <!-- Article Content -->
+    <div class="article-card__content">
+      <!-- Article Meta -->
+      <div class="article-card__meta">
+        <span class="article-card__type">Article</span>
+        <time class="article-card__date" datetime="{{ article.published_at | date: '%Y-%m-%d' }}">
+          {{ article.published_at | date: '%B %d, %Y' }}
+        </time>
+      </div>
+
+      <!-- Article Title -->
+      <h3 class="article-card__title">
+        <a href="{{ article.url }}" class="article-card__title-link">
+          {% if show_search_highlight %}
+            {{ article.title | highlight: search.terms }}
+          {% else %}
+            {{ article.title }}
+          {% endif %}
+        </a>
+      </h3>
+
+      <!-- Article Summary -->
+      {% if article.summary != blank %}
+        <div class="article-card__summary">
+          {% if show_search_highlight %}
+            {{ article.summary | strip_html | truncate: 150 | highlight: search.terms }}
+          {% else %}
+            {{ article.summary | strip_html | truncate: 150 }}
+          {% endif %}
+        </div>
+      {% elsif article.excerpt != blank %}
+        <div class="article-card__summary">
+          {% if show_search_highlight %}
+            {{ article.excerpt | strip_html | truncate: 150 | highlight: search.terms }}
+          {% else %}
+            {{ article.excerpt | strip_html | truncate: 150 }}
+          {% endif %}
+        </div>
+      {% endif %}
+
+      <!-- Article Tags -->
+      {% if article.tags.size > 0 %}
+        <div class="article-card__tags">
+          {% for tag in article.tags limit: 3 %}
+            <span class="article-card__tag">{{ tag }}</span>
+          {% endfor %}
+        </div>
+      {% endif %}
+
+      <!-- Read More Link -->
+      <div class="article-card__actions">
+        <a href="{{ article.url }}" class="article-card__read-more">
+          Read More
+          {% render 'icon', icon: 'arrow-right' %}
+        </a>
+      </div>
+    </div>
+  </div>
+</article>

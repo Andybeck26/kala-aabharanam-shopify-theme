@@ -1,0 +1,677 @@
+{% comment %}
+  Newsletter signup section for Kala Aabharanam
+  GDPR-compliant newsletter subscription with email marketing integration
+{% endcomment %}
+
+<section class="newsletter-section" x-data="newsletterManager()">
+  <div class="container">
+    <div class="newsletter-content">
+      <div class="newsletter-text">
+        <h2 class="newsletter-title">
+          {{ section.settings.title | default: 'Stay Connected with Kala Aabharanam' }}
+        </h2>
+        <p class="newsletter-description">
+          {{ section.settings.description | default: 'Be the first to know about new collections, exclusive offers, and traditional jewelry care tips. Join our community of jewelry lovers!' }}
+        </p>
+      </div>
+
+      <div class="newsletter-form-container">
+        <!-- Newsletter Signup Form -->
+        <form class="newsletter-form" 
+              @submit.prevent="submitNewsletter()"
+              x-show="!isSubscribed">
+          
+          <div class="newsletter-form__fields">
+            <div class="newsletter-form__field">
+              <label for="newsletter-email" class="newsletter-form__label visually-hidden">
+                Email Address
+              </label>
+              <input type="email" 
+                     id="newsletter-email"
+                     x-model="email"
+                     placeholder="Enter your email address"
+                     class="newsletter-form__input"
+                     required
+                     :disabled="isLoading"
+                     aria-describedby="newsletter-error">
+            </div>
+            
+            {% if section.settings.collect_name %}
+            <div class="newsletter-form__field">
+              <label for="newsletter-name" class="newsletter-form__label visually-hidden">
+                First Name (Optional)
+              </label>
+              <input type="text" 
+                     id="newsletter-name"
+                     x-model="firstName"
+                     placeholder="First name (optional)"
+                     class="newsletter-form__input"
+                     :disabled="isLoading">
+            </div>
+            {% endif %}
+          </div>
+
+          <!-- GDPR Compliance -->
+          <div class="newsletter-form__consent">
+            <label class="newsletter-form__consent-label">
+              <input type="checkbox" 
+                     x-model="consentGiven"
+                     class="newsletter-form__consent-checkbox"
+                     required>
+              <span class="newsletter-form__consent-text">
+                I agree to receive marketing emails from Kala Aabharanam. 
+                <a href="/pages/privacy-policy" target="_blank" class="newsletter-form__consent-link">
+                  Privacy Policy
+                </a>
+              </span>
+            </label>
+          </div>
+
+          <!-- Preferences (Optional) -->
+          {% if section.settings.show_preferences %}
+          <div class="newsletter-form__preferences">
+            <p class="newsletter-form__preferences-title">What interests you? (Optional)</p>
+            <div class="newsletter-form__preferences-options">
+              <label class="newsletter-form__preference">
+                <input type="checkbox" x-model="preferences" value="jewellery">
+                <span>Artificial Jewellery</span>
+              </label>
+              <label class="newsletter-form__preference">
+                <input type="checkbox" x-model="preferences" value="kalamkari">
+                <span>Kalamkari Textiles</span>
+              </label>
+              <label class="newsletter-form__preference">
+                <input type="checkbox" x-model="preferences" value="offers">
+                <span>Exclusive Offers</span>
+              </label>
+              <label class="newsletter-form__preference">
+                <input type="checkbox" x-model="preferences" value="care-tips">
+                <span>Care Tips & Guides</span>
+              </label>
+            </div>
+          </div>
+          {% endif %}
+
+          <button type="submit" 
+                  class="newsletter-form__submit"
+                  :disabled="isLoading || !email || !consentGiven"
+                  :class="{ 'newsletter-form__submit--loading': isLoading }">
+            <span x-show="!isLoading">
+              {{ section.settings.button_text | default: 'Subscribe Now' }}
+            </span>
+            <span x-show="isLoading" class="newsletter-form__loading">
+              Subscribing...
+            </span>
+          </button>
+
+          <!-- Error Message -->
+          <div class="newsletter-form__error" 
+               x-show="errorMessage" 
+               id="newsletter-error"
+               role="alert">
+            <span x-text="errorMessage"></span>
+          </div>
+        </form>
+
+        <!-- Success Message -->
+        <div class="newsletter-success" x-show="isSubscribed" x-transition>
+          <div class="newsletter-success__icon">
+            {% render 'icon', icon: 'check-circle' %}
+          </div>
+          <h3 class="newsletter-success__title">Welcome to our community!</h3>
+          <p class="newsletter-success__message">
+            Thank you for subscribing! Check your email for a welcome message and your exclusive discount code.
+          </p>
+          
+          <!-- Social Media Follow -->
+          <div class="newsletter-success__social">
+            <p>Follow us for daily inspiration:</p>
+            <div class="newsletter-success__social-links">
+              {% if section.settings.instagram_url != blank %}
+              <a href="{{ section.settings.instagram_url }}" 
+                 target="_blank" 
+                 rel="noopener"
+                 class="newsletter-success__social-link"
+                 aria-label="Follow us on Instagram">
+                {% render 'icon', icon: 'instagram' %}
+              </a>
+              {% endif %}
+              
+              {% if section.settings.facebook_url != blank %}
+              <a href="{{ section.settings.facebook_url }}" 
+                 target="_blank" 
+                 rel="noopener"
+                 class="newsletter-success__social-link"
+                 aria-label="Follow us on Facebook">
+                {% render 'icon', icon: 'facebook' %}
+              </a>
+              {% endif %}
+              
+              {% if section.settings.pinterest_url != blank %}
+              <a href="{{ section.settings.pinterest_url }}" 
+                 target="_blank" 
+                 rel="noopener"
+                 class="newsletter-success__social-link"
+                 aria-label="Follow us on Pinterest">
+                {% render 'icon', icon: 'pinterest' %}
+              </a>
+              {% endif %}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Newsletter Benefits -->
+    {% if section.settings.show_benefits %}
+    <div class="newsletter-benefits">
+      <h3 class="newsletter-benefits__title">Subscriber Benefits</h3>
+      <div class="newsletter-benefits__grid">
+        <div class="newsletter-benefit">
+          <div class="newsletter-benefit__icon">
+            {% render 'icon', icon: 'star' %}
+          </div>
+          <h4 class="newsletter-benefit__title">Exclusive Access</h4>
+          <p class="newsletter-benefit__description">
+            First access to new collections and limited edition pieces
+          </p>
+        </div>
+        
+        <div class="newsletter-benefit">
+          <div class="newsletter-benefit__icon">
+            {% render 'icon', icon: 'heart' %}
+          </div>
+          <h4 class="newsletter-benefit__title">Special Offers</h4>
+          <p class="newsletter-benefit__description">
+            Subscriber-only discounts and promotional codes
+          </p>
+        </div>
+        
+        <div class="newsletter-benefit">
+          <div class="newsletter-benefit__icon">
+            {% render 'icon', icon: 'shield' %}
+          </div>
+          <h4 class="newsletter-benefit__title">Care Tips</h4>
+          <p class="newsletter-benefit__description">
+            Expert advice on jewelry care and styling tips
+          </p>
+        </div>
+      </div>
+    </div>
+    {% endif %}
+  </div>
+</section>
+
+<script>
+  function newsletterManager() {
+    return {
+      email: '',
+      firstName: '',
+      consentGiven: false,
+      preferences: [],
+      isLoading: false,
+      isSubscribed: false,
+      errorMessage: '',
+
+      async submitNewsletter() {
+        if (!this.email || !this.consentGiven) {
+          this.errorMessage = 'Please fill in all required fields and accept the privacy policy.';
+          return;
+        }
+
+        this.isLoading = true;
+        this.errorMessage = '';
+
+        try {
+          // Shopify Customer API for newsletter subscription
+          const response = await fetch('/contact', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/x-www-form-urlencoded',
+            },
+            body: new URLSearchParams({
+              'form_type': 'customer',
+              'utf8': '✓',
+              'contact[tags]': 'newsletter',
+              'contact[email]': this.email,
+              'contact[first_name]': this.firstName,
+              'contact[note]': `Newsletter subscription. Preferences: ${this.preferences.join(', ')}`,
+              'contact[accepts_marketing]': 'true'
+            })
+          });
+
+          if (response.ok) {
+            this.isSubscribed = true;
+            
+            // Track subscription event for analytics
+            if (typeof gtag !== 'undefined') {
+              gtag('event', 'newsletter_signup', {
+                'event_category': 'engagement',
+                'event_label': 'newsletter'
+              });
+            }
+
+            // Clear form data
+            this.email = '';
+            this.firstName = '';
+            this.preferences = [];
+            this.consentGiven = false;
+
+            // Store subscription status to prevent re-subscription
+            localStorage.setItem('newsletter_subscribed', 'true');
+
+          } else {
+            throw new Error('Subscription failed');
+          }
+
+        } catch (error) {
+          console.error('Newsletter subscription error:', error);
+          this.errorMessage = 'Sorry, there was an error subscribing you to our newsletter. Please try again.';
+        } finally {
+          this.isLoading = false;
+        }
+      },
+
+      init() {
+        // Check if user is already subscribed
+        if (localStorage.getItem('newsletter_subscribed') === 'true') {
+          this.isSubscribed = true;
+        }
+      }
+    }
+  }
+</script>
+
+<style>
+  .newsletter-section {
+    background: linear-gradient(135deg, var(--color-background) 0%, #f8f9fa 100%);
+    padding: 4rem 0;
+    margin: 3rem 0;
+  }
+
+  .newsletter-content {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 3rem;
+    align-items: center;
+    margin-bottom: 3rem;
+  }
+
+  .newsletter-title {
+    font-family: var(--font-heading);
+    font-size: 2.5rem;
+    color: var(--color-primary);
+    margin-bottom: 1rem;
+    line-height: 1.2;
+  }
+
+  .newsletter-description {
+    font-size: 1.1rem;
+    color: var(--color-text);
+    line-height: 1.6;
+  }
+
+  .newsletter-form {
+    background: white;
+    padding: 2rem;
+    border-radius: 12px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+  }
+
+  .newsletter-form__fields {
+    display: flex;
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+  }
+
+  .newsletter-form__field {
+    flex: 1;
+  }
+
+  .newsletter-form__input {
+    width: 100%;
+    padding: 1rem;
+    border: 2px solid var(--color-secondary);
+    border-radius: 8px;
+    font-size: 1rem;
+    transition: border-color 0.3s ease;
+  }
+
+  .newsletter-form__input:focus {
+    outline: none;
+    border-color: var(--color-primary);
+  }
+
+  .newsletter-form__input:disabled {
+    background-color: #f5f5f5;
+    cursor: not-allowed;
+  }
+
+  .newsletter-form__consent {
+    margin-bottom: 1.5rem;
+  }
+
+  .newsletter-form__consent-label {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.75rem;
+    cursor: pointer;
+    font-size: 0.9rem;
+    line-height: 1.4;
+  }
+
+  .newsletter-form__consent-checkbox {
+    margin-top: 0.2rem;
+    flex-shrink: 0;
+  }
+
+  .newsletter-form__consent-link {
+    color: var(--color-primary);
+    text-decoration: underline;
+  }
+
+  .newsletter-form__preferences {
+    margin-bottom: 1.5rem;
+    padding: 1rem;
+    background: var(--color-background);
+    border-radius: 8px;
+  }
+
+  .newsletter-form__preferences-title {
+    font-weight: 600;
+    margin-bottom: 0.75rem;
+    color: var(--color-primary);
+  }
+
+  .newsletter-form__preferences-options {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.5rem;
+  }
+
+  .newsletter-form__preference {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    cursor: pointer;
+    font-size: 0.9rem;
+  }
+
+  .newsletter-form__submit {
+    width: 100%;
+    padding: 1rem 2rem;
+    background: var(--color-primary);
+    color: white;
+    border: none;
+    border-radius: 8px;
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    margin-bottom: 1rem;
+  }
+
+  .newsletter-form__submit:hover:not(:disabled) {
+    background: var(--color-accent);
+    transform: translateY(-2px);
+  }
+
+  .newsletter-form__submit:disabled {
+    background: #ccc;
+    cursor: not-allowed;
+    transform: none;
+  }
+
+  .newsletter-form__submit--loading {
+    position: relative;
+  }
+
+  .newsletter-form__loading {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+  }
+
+  .newsletter-form__loading::after {
+    content: '';
+    width: 16px;
+    height: 16px;
+    border: 2px solid transparent;
+    border-top: 2px solid currentColor;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+  }
+
+  @keyframes spin {
+    to {
+      transform: rotate(360deg);
+    }
+  }
+
+  .newsletter-form__error {
+    color: #dc2626;
+    font-size: 0.9rem;
+    padding: 0.75rem;
+    background: #fef2f2;
+    border: 1px solid #fecaca;
+    border-radius: 4px;
+  }
+
+  .newsletter-success {
+    background: white;
+    padding: 2rem;
+    border-radius: 12px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+    text-align: center;
+  }
+
+  .newsletter-success__icon {
+    color: #10b981;
+    margin-bottom: 1rem;
+  }
+
+  .newsletter-success__icon svg {
+    width: 48px;
+    height: 48px;
+  }
+
+  .newsletter-success__title {
+    font-family: var(--font-heading);
+    font-size: 1.5rem;
+    color: var(--color-primary);
+    margin-bottom: 1rem;
+  }
+
+  .newsletter-success__message {
+    color: var(--color-text);
+    margin-bottom: 2rem;
+    line-height: 1.6;
+  }
+
+  .newsletter-success__social {
+    border-top: 1px solid var(--color-background);
+    padding-top: 1.5rem;
+  }
+
+  .newsletter-success__social p {
+    margin-bottom: 1rem;
+    color: var(--color-text);
+  }
+
+  .newsletter-success__social-links {
+    display: flex;
+    justify-content: center;
+    gap: 1rem;
+  }
+
+  .newsletter-success__social-link {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+    background: var(--color-primary);
+    color: white;
+    border-radius: 50%;
+    transition: all 0.3s ease;
+  }
+
+  .newsletter-success__social-link:hover {
+    background: var(--color-accent);
+    transform: translateY(-2px);
+  }
+
+  .newsletter-benefits {
+    text-align: center;
+  }
+
+  .newsletter-benefits__title {
+    font-family: var(--font-heading);
+    font-size: 1.5rem;
+    color: var(--color-primary);
+    margin-bottom: 2rem;
+  }
+
+  .newsletter-benefits__grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 2rem;
+  }
+
+  .newsletter-benefit {
+    text-align: center;
+  }
+
+  .newsletter-benefit__icon {
+    color: var(--color-accent);
+    margin-bottom: 1rem;
+  }
+
+  .newsletter-benefit__icon svg {
+    width: 32px;
+    height: 32px;
+  }
+
+  .newsletter-benefit__title {
+    font-family: var(--font-heading);
+    color: var(--color-primary);
+    margin-bottom: 0.5rem;
+  }
+
+  .newsletter-benefit__description {
+    color: var(--color-text);
+    font-size: 0.9rem;
+    line-height: 1.5;
+  }
+
+  .visually-hidden {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+  }
+
+  @media (max-width: 768px) {
+    .newsletter-content {
+      grid-template-columns: 1fr;
+      gap: 2rem;
+    }
+
+    .newsletter-title {
+      font-size: 2rem;
+    }
+
+    .newsletter-form {
+      padding: 1.5rem;
+    }
+
+    .newsletter-form__fields {
+      flex-direction: column;
+    }
+
+    .newsletter-form__preferences-options {
+      grid-template-columns: 1fr;
+    }
+
+    .newsletter-benefits__grid {
+      grid-template-columns: 1fr;
+      gap: 1.5rem;
+    }
+  }
+</style>
+
+{% schema %}
+{
+  "name": "Newsletter Signup",
+  "tag": "section",
+  "class": "section",
+  "settings": [
+    {
+      "type": "text",
+      "id": "title",
+      "label": "Title",
+      "default": "Stay Connected with Kala Aabharanam"
+    },
+    {
+      "type": "textarea",
+      "id": "description",
+      "label": "Description",
+      "default": "Be the first to know about new collections, exclusive offers, and traditional jewelry care tips. Join our community of jewelry lovers!"
+    },
+    {
+      "type": "text",
+      "id": "button_text",
+      "label": "Button Text",
+      "default": "Subscribe Now"
+    },
+    {
+      "type": "checkbox",
+      "id": "collect_name",
+      "label": "Collect first name",
+      "default": true
+    },
+    {
+      "type": "checkbox",
+      "id": "show_preferences",
+      "label": "Show preference options",
+      "default": true
+    },
+    {
+      "type": "checkbox",
+      "id": "show_benefits",
+      "label": "Show subscriber benefits",
+      "default": true
+    },
+    {
+      "type": "header",
+      "content": "Social Media Links"
+    },
+    {
+      "type": "url",
+      "id": "instagram_url",
+      "label": "Instagram URL"
+    },
+    {
+      "type": "url",
+      "id": "facebook_url",
+      "label": "Facebook URL"
+    },
+    {
+      "type": "url",
+      "id": "pinterest_url",
+      "label": "Pinterest URL"
+    }
+  ],
+  "presets": [
+    {
+      "name": "Newsletter Signup"
+    }
+  ]
+}
+{% endschema %}

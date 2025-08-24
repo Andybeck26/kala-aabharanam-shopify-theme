@@ -1,0 +1,852 @@
+{% comment %}
+  Gallery/Lookbook page template for Kala Aabharanam
+  Displays lifestyle images with shoppable hotspots
+{% endcomment %}
+
+<div class="gallery-page" x-data="galleryManager()">
+  <div class="container">
+    <!-- Gallery Header -->
+    <header class="gallery-header">
+      <h1 class="gallery-title">{{ page.title | default: 'Gallery' }}</h1>
+      {% if page.content != blank %}
+        <div class="gallery-description">
+          {{ page.content }}
+        </div>
+      {% endif %}
+    </header>
+
+    <!-- Gallery Filter -->
+    <nav class="gallery-filter" aria-label="Gallery categories">
+      <ul class="gallery-filter__list">
+        <li class="gallery-filter__item">
+          <button @click="filterGallery('all')" 
+                  :class="{ 'gallery-filter__button--active': activeFilter === 'all' }"
+                  class="gallery-filter__button">
+            All
+          </button>
+        </li>
+        <li class="gallery-filter__item">
+          <button @click="filterGallery('jewellery')" 
+                  :class="{ 'gallery-filter__button--active': activeFilter === 'jewellery' }"
+                  class="gallery-filter__button">
+            Jewellery
+          </button>
+        </li>
+        <li class="gallery-filter__item">
+          <button @click="filterGallery('kalamkari')" 
+                  :class="{ 'gallery-filter__button--active': activeFilter === 'kalamkari' }"
+                  class="gallery-filter__button">
+            Kalamkari
+          </button>
+        </li>
+        <li class="gallery-filter__item">
+          <button @click="filterGallery('lifestyle')" 
+                  :class="{ 'gallery-filter__button--active': activeFilter === 'lifestyle' }"
+                  class="gallery-filter__button">
+            Lifestyle
+          </button>
+        </li>
+      </ul>
+    </nav>
+
+    <!-- Gallery Grid -->
+    <div class="gallery-grid" id="gallery-grid">
+      <!-- Gallery items will be populated via metafields or hardcoded for demo -->
+      
+      <!-- Sample Gallery Item 1 - Jewellery -->
+      <div class="gallery-item" 
+           data-category="jewellery"
+           x-show="activeFilter === 'all' || activeFilter === 'jewellery'"
+           x-transition>
+        <div class="gallery-item__image-container" @click="openModal('item1')">
+          <img src="https://via.placeholder.com/400x500/D2B48C/8A3324?text=Jewellery+Look+1"
+               alt="Traditional Gold Necklace Set"
+               class="gallery-item__image"
+               loading="lazy">
+          
+          <!-- Shoppable Hotspots -->
+          <div class="hotspot" style="top: 30%; left: 45%;" 
+               @click.stop="showProductQuickView('necklace-set-1')">
+            <div class="hotspot__marker">
+              <span class="hotspot__pulse"></span>
+              <span class="hotspot__dot"></span>
+            </div>
+            <div class="hotspot__tooltip">
+              <span class="hotspot__product-name">Traditional Gold Necklace Set</span>
+              <span class="hotspot__product-price">₹2,499</span>
+            </div>
+          </div>
+          
+          <div class="hotspot" style="top: 60%; left: 40%;" 
+               @click.stop="showProductQuickView('earrings-1')">
+            <div class="hotspot__marker">
+              <span class="hotspot__pulse"></span>
+              <span class="hotspot__dot"></span>
+            </div>
+            <div class="hotspot__tooltip">
+              <span class="hotspot__product-name">Matching Earrings</span>
+              <span class="hotspot__product-price">₹899</span>
+            </div>
+          </div>
+          
+          <div class="gallery-item__overlay">
+            <div class="gallery-item__overlay-content">
+              <h3 class="gallery-item__title">Traditional Elegance</h3>
+              <p class="gallery-item__description">Complete bridal jewellery set</p>
+              <button class="gallery-item__view-btn">
+                View Products
+                {% render 'icon', icon: 'eye' %}
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Sample Gallery Item 2 - Kalamkari -->
+      <div class="gallery-item" 
+           data-category="kalamkari"
+           x-show="activeFilter === 'all' || activeFilter === 'kalamkari'"
+           x-transition>
+        <div class="gallery-item__image-container" @click="openModal('item2')">
+          <img src="https://via.placeholder.com/400x600/8A3324/D2B48C?text=Kalamkari+Dress"
+               alt="Kalamkari Cotton Dress"
+               class="gallery-item__image"
+               loading="lazy">
+          
+          <div class="hotspot" style="top: 40%; left: 50%;" 
+               @click.stop="showProductQuickView('kalamkari-dress-1')">
+            <div class="hotspot__marker">
+              <span class="hotspot__pulse"></span>
+              <span class="hotspot__dot"></span>
+            </div>
+            <div class="hotspot__tooltip">
+              <span class="hotspot__product-name">Kalamkari Cotton Dress</span>
+              <span class="hotspot__product-price">₹1,899</span>
+            </div>
+          </div>
+          
+          <div class="gallery-item__overlay">
+            <div class="gallery-item__overlay-content">
+              <h3 class="gallery-item__title">Artisan Craft</h3>
+              <p class="gallery-item__description">Hand-painted Kalamkari</p>
+              <button class="gallery-item__view-btn">
+                View Products
+                {% render 'icon', icon: 'eye' %}
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Sample Gallery Item 3 - Lifestyle -->
+      <div class="gallery-item gallery-item--wide" 
+           data-category="lifestyle"
+           x-show="activeFilter === 'all' || activeFilter === 'lifestyle'"
+           x-transition>
+        <div class="gallery-item__image-container" @click="openModal('item3')">
+          <img src="https://via.placeholder.com/800x500/C71585/FFFFFF?text=Lifestyle+Shot"
+               alt="Complete Traditional Look"
+               class="gallery-item__image"
+               loading="lazy">
+          
+          <div class="hotspot" style="top: 25%; left: 30%;" 
+               @click.stop="showProductQuickView('complete-set-1')">
+            <div class="hotspot__marker">
+              <span class="hotspot__pulse"></span>
+              <span class="hotspot__dot"></span>
+            </div>
+            <div class="hotspot__tooltip">
+              <span class="hotspot__product-name">Complete Traditional Set</span>
+              <span class="hotspot__product-price">₹4,999</span>
+            </div>
+          </div>
+          
+          <div class="gallery-item__overlay">
+            <div class="gallery-item__overlay-content">
+              <h3 class="gallery-item__title">Festival Ready</h3>
+              <p class="gallery-item__description">Complete look for special occasions</p>
+              <button class="gallery-item__view-btn">
+                View Products
+                {% render 'icon', icon: 'eye' %}
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Add more gallery items as needed -->
+    </div>
+
+    <!-- Load More Button -->
+    <div class="gallery-load-more" x-show="hasMoreItems">
+      <button @click="loadMoreItems()" class="gallery-load-more__btn">
+        Load More Images
+      </button>
+    </div>
+  </div>
+
+  <!-- Image Modal -->
+  <div class="gallery-modal" 
+       x-show="modalOpen" 
+       x-transition.opacity
+       @click="closeModal()"
+       @keydown.escape.window="closeModal()">
+    <div class="gallery-modal__content" @click.stop>
+      <button class="gallery-modal__close" @click="closeModal()">
+        {% render 'icon', icon: 'close' %}
+      </button>
+      
+      <div class="gallery-modal__image-container">
+        <img :src="modalImage" 
+             :alt="modalAlt" 
+             class="gallery-modal__image">
+        
+        <!-- Modal Hotspots -->
+        <div class="gallery-modal__hotspots" x-html="modalHotspots"></div>
+      </div>
+      
+      <div class="gallery-modal__info">
+        <h3 class="gallery-modal__title" x-text="modalTitle"></h3>
+        <p class="gallery-modal__description" x-text="modalDescription"></p>
+        
+        <div class="gallery-modal__products" x-show="modalProducts.length > 0">
+          <h4>Featured Products:</h4>
+          <template x-for="product in modalProducts" :key="product.id">
+            <div class="gallery-modal__product">
+              <img :src="product.image" :alt="product.name" class="gallery-modal__product-image">
+              <div class="gallery-modal__product-info">
+                <h5 x-text="product.name"></h5>
+                <span class="gallery-modal__product-price" x-text="product.price"></span>
+                <button @click="addToCart(product.id)" class="gallery-modal__add-to-cart">
+                  Add to Cart
+                </button>
+              </div>
+            </div>
+          </template>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Product Quick View Modal -->
+  <div class="quick-view-modal" 
+       x-show="quickViewOpen" 
+       x-transition.opacity
+       @click="closeQuickView()"
+       @keydown.escape.window="closeQuickView()">
+    <div class="quick-view-modal__content" @click.stop>
+      <button class="quick-view-modal__close" @click="closeQuickView()">
+        {% render 'icon', icon: 'close' %}
+      </button>
+      
+      <div class="quick-view-modal__product" x-show="quickViewProduct">
+        <div class="quick-view-modal__image">
+          <img :src="quickViewProduct?.image" 
+               :alt="quickViewProduct?.name" 
+               class="quick-view-modal__product-image">
+        </div>
+        
+        <div class="quick-view-modal__details">
+          <h3 class="quick-view-modal__product-name" x-text="quickViewProduct?.name"></h3>
+          <div class="quick-view-modal__product-price" x-text="quickViewProduct?.price"></div>
+          <p class="quick-view-modal__product-description" x-text="quickViewProduct?.description"></p>
+          
+          <div class="quick-view-modal__actions">
+            <button @click="addToCart(quickViewProduct?.id)" 
+                    class="quick-view-modal__add-to-cart">
+              Add to Cart
+            </button>
+            <a :href="quickViewProduct?.url" 
+               class="quick-view-modal__view-full">
+              View Full Details
+            </a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  function galleryManager() {
+    return {
+      activeFilter: 'all',
+      modalOpen: false,
+      modalImage: '',
+      modalAlt: '',
+      modalTitle: '',
+      modalDescription: '',
+      modalHotspots: '',
+      modalProducts: [],
+      quickViewOpen: false,
+      quickViewProduct: null,
+      hasMoreItems: true,
+      
+      filterGallery(category) {
+        this.activeFilter = category;
+      },
+      
+      openModal(itemId) {
+        // Sample data - in real implementation, this would fetch from Shopify
+        const items = {
+          'item1': {
+            image: 'https://via.placeholder.com/800x1000/D2B48C/8A3324?text=Jewellery+Look+1',
+            alt: 'Traditional Gold Necklace Set',
+            title: 'Traditional Elegance',
+            description: 'Complete bridal jewellery set featuring traditional designs',
+            products: [
+              {
+                id: 'necklace-set-1',
+                name: 'Traditional Gold Necklace Set',
+                price: '₹2,499',
+                image: 'https://via.placeholder.com/100x100/D2B48C/8A3324?text=Necklace',
+                url: '/products/traditional-gold-necklace-set'
+              }
+            ]
+          },
+          'item2': {
+            image: 'https://via.placeholder.com/800x1200/8A3324/D2B48C?text=Kalamkari+Dress',
+            alt: 'Kalamkari Cotton Dress',
+            title: 'Artisan Craft',
+            description: 'Hand-painted Kalamkari cotton dress with traditional motifs',
+            products: [
+              {
+                id: 'kalamkari-dress-1',
+                name: 'Kalamkari Cotton Dress',
+                price: '₹1,899',
+                image: 'https://via.placeholder.com/100x100/8A3324/D2B48C?text=Dress',
+                url: '/products/kalamkari-cotton-dress'
+              }
+            ]
+          }
+        };
+        
+        const item = items[itemId];
+        if (item) {
+          this.modalImage = item.image;
+          this.modalAlt = item.alt;
+          this.modalTitle = item.title;
+          this.modalDescription = item.description;
+          this.modalProducts = item.products;
+          this.modalOpen = true;
+          document.body.style.overflow = 'hidden';
+        }
+      },
+      
+      closeModal() {
+        this.modalOpen = false;
+        document.body.style.overflow = '';
+      },
+      
+      showProductQuickView(productId) {
+        // Sample product data - in real implementation, fetch from Shopify
+        const products = {
+          'necklace-set-1': {
+            id: 'necklace-set-1',
+            name: 'Traditional Gold Necklace Set',
+            price: '₹2,499',
+            description: 'Elegant traditional necklace set perfect for weddings and festivals.',
+            image: 'https://via.placeholder.com/400x400/D2B48C/8A3324?text=Necklace',
+            url: '/products/traditional-gold-necklace-set'
+          },
+          'earrings-1': {
+            id: 'earrings-1',
+            name: 'Matching Earrings',
+            price: '₹899',
+            description: 'Beautiful earrings that complement the necklace set perfectly.',
+            image: 'https://via.placeholder.com/400x400/D2B48C/8A3324?text=Earrings',
+            url: '/products/matching-earrings'
+          }
+        };
+        
+        this.quickViewProduct = products[productId];
+        if (this.quickViewProduct) {
+          this.quickViewOpen = true;
+          document.body.style.overflow = 'hidden';
+        }
+      },
+      
+      closeQuickView() {
+        this.quickViewOpen = false;
+        this.quickViewProduct = null;
+        document.body.style.overflow = '';
+      },
+      
+      addToCart(productId) {
+        // Implement add to cart functionality
+        console.log('Adding to cart:', productId);
+        // This would integrate with the existing cart system
+      },
+      
+      loadMoreItems() {
+        // Implement pagination/infinite scroll
+        console.log('Loading more items...');
+        this.hasMoreItems = false; // For demo purposes
+      }
+    }
+  }
+</script>
+
+<style>
+  .gallery-page {
+    padding: 2rem 0;
+  }
+
+  .gallery-header {
+    text-align: center;
+    margin-bottom: 3rem;
+  }
+
+  .gallery-title {
+    font-family: var(--font-heading);
+    font-size: 2.5rem;
+    color: var(--color-primary);
+    margin-bottom: 1rem;
+  }
+
+  .gallery-description {
+    font-size: 1.1rem;
+    color: var(--color-text);
+    max-width: 600px;
+    margin: 0 auto;
+  }
+
+  .gallery-filter {
+    margin-bottom: 2rem;
+  }
+
+  .gallery-filter__list {
+    display: flex;
+    justify-content: center;
+    gap: 1rem;
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    flex-wrap: wrap;
+  }
+
+  .gallery-filter__button {
+    padding: 0.75rem 1.5rem;
+    border: 2px solid var(--color-secondary);
+    border-radius: 25px;
+    background: white;
+    color: var(--color-text);
+    cursor: pointer;
+    transition: all 0.3s ease;
+    font-weight: 500;
+  }
+
+  .gallery-filter__button:hover,
+  .gallery-filter__button--active {
+    background-color: var(--color-primary);
+    color: white;
+    border-color: var(--color-primary);
+  }
+
+  .gallery-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 2rem;
+    margin-bottom: 3rem;
+  }
+
+  .gallery-item {
+    position: relative;
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+    transition: transform 0.3s ease;
+  }
+
+  .gallery-item--wide {
+    grid-column: span 2;
+  }
+
+  .gallery-item:hover {
+    transform: translateY(-5px);
+  }
+
+  .gallery-item__image-container {
+    position: relative;
+    cursor: pointer;
+    overflow: hidden;
+  }
+
+  .gallery-item__image {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: transform 0.3s ease;
+  }
+
+  .gallery-item:hover .gallery-item__image {
+    transform: scale(1.05);
+  }
+
+  .gallery-item__overlay {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: linear-gradient(transparent, rgba(0, 0, 0, 0.8));
+    color: white;
+    padding: 2rem;
+    transform: translateY(100%);
+    transition: transform 0.3s ease;
+  }
+
+  .gallery-item:hover .gallery-item__overlay {
+    transform: translateY(0);
+  }
+
+  .gallery-item__title {
+    font-family: var(--font-heading);
+    font-size: 1.5rem;
+    margin-bottom: 0.5rem;
+  }
+
+  .gallery-item__description {
+    margin-bottom: 1rem;
+    opacity: 0.9;
+  }
+
+  .gallery-item__view-btn {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    background: var(--color-accent);
+    color: white;
+    border: none;
+    padding: 0.75rem 1.5rem;
+    border-radius: 25px;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+  }
+
+  .gallery-item__view-btn:hover {
+    background-color: var(--color-primary);
+  }
+
+  /* Hotspot Styles */
+  .hotspot {
+    position: absolute;
+    z-index: 10;
+    cursor: pointer;
+  }
+
+  .hotspot__marker {
+    position: relative;
+    width: 24px;
+    height: 24px;
+  }
+
+  .hotspot__dot {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 12px;
+    height: 12px;
+    background: var(--color-accent);
+    border: 2px solid white;
+    border-radius: 50%;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+  }
+
+  .hotspot__pulse {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 24px;
+    height: 24px;
+    background: var(--color-accent);
+    border-radius: 50%;
+    opacity: 0.6;
+    animation: pulse 2s infinite;
+  }
+
+  @keyframes pulse {
+    0% {
+      transform: translate(-50%, -50%) scale(1);
+      opacity: 0.6;
+    }
+    70% {
+      transform: translate(-50%, -50%) scale(2);
+      opacity: 0;
+    }
+    100% {
+      transform: translate(-50%, -50%) scale(1);
+      opacity: 0;
+    }
+  }
+
+  .hotspot__tooltip {
+    position: absolute;
+    bottom: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    background: white;
+    padding: 0.75rem;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+    white-space: nowrap;
+    opacity: 0;
+    visibility: hidden;
+    transition: all 0.3s ease;
+    margin-bottom: 0.5rem;
+  }
+
+  .hotspot:hover .hotspot__tooltip {
+    opacity: 1;
+    visibility: visible;
+  }
+
+  .hotspot__product-name {
+    display: block;
+    font-weight: 600;
+    color: var(--color-primary);
+    margin-bottom: 0.25rem;
+  }
+
+  .hotspot__product-price {
+    display: block;
+    color: var(--color-accent);
+    font-weight: 500;
+  }
+
+  /* Modal Styles */
+  .gallery-modal,
+  .quick-view-modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.9);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+    padding: 2rem;
+  }
+
+  .gallery-modal__content,
+  .quick-view-modal__content {
+    background: white;
+    border-radius: 12px;
+    max-width: 90vw;
+    max-height: 90vh;
+    overflow: auto;
+    position: relative;
+  }
+
+  .gallery-modal__close,
+  .quick-view-modal__close {
+    position: absolute;
+    top: 1rem;
+    right: 1rem;
+    background: rgba(0, 0, 0, 0.5);
+    color: white;
+    border: none;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    cursor: pointer;
+    z-index: 10;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .gallery-modal__image-container {
+    position: relative;
+  }
+
+  .gallery-modal__image {
+    width: 100%;
+    height: auto;
+    display: block;
+  }
+
+  .gallery-modal__info {
+    padding: 2rem;
+  }
+
+  .gallery-modal__title {
+    font-family: var(--font-heading);
+    font-size: 2rem;
+    color: var(--color-primary);
+    margin-bottom: 1rem;
+  }
+
+  .gallery-modal__description {
+    color: var(--color-text);
+    margin-bottom: 2rem;
+    line-height: 1.6;
+  }
+
+  .gallery-modal__products {
+    border-top: 1px solid var(--color-background);
+    padding-top: 2rem;
+  }
+
+  .gallery-modal__product {
+    display: flex;
+    gap: 1rem;
+    padding: 1rem;
+    border: 1px solid var(--color-background);
+    border-radius: 8px;
+    margin-bottom: 1rem;
+  }
+
+  .gallery-modal__product-image {
+    width: 80px;
+    height: 80px;
+    object-fit: cover;
+    border-radius: 4px;
+  }
+
+  .gallery-modal__product-info {
+    flex: 1;
+  }
+
+  .gallery-modal__product-price {
+    color: var(--color-accent);
+    font-weight: 600;
+    display: block;
+    margin: 0.5rem 0;
+  }
+
+  .gallery-modal__add-to-cart {
+    background: var(--color-primary);
+    color: white;
+    border: none;
+    padding: 0.5rem 1rem;
+    border-radius: 4px;
+    cursor: pointer;
+  }
+
+  /* Quick View Modal */
+  .quick-view-modal__content {
+    display: flex;
+    max-width: 800px;
+    width: 100%;
+  }
+
+  .quick-view-modal__image,
+  .quick-view-modal__details {
+    flex: 1;
+  }
+
+  .quick-view-modal__product-image {
+    width: 100%;
+    height: 400px;
+    object-fit: cover;
+  }
+
+  .quick-view-modal__details {
+    padding: 2rem;
+  }
+
+  .quick-view-modal__product-name {
+    font-family: var(--font-heading);
+    font-size: 1.5rem;
+    color: var(--color-primary);
+    margin-bottom: 1rem;
+  }
+
+  .quick-view-modal__product-price {
+    font-size: 1.25rem;
+    color: var(--color-accent);
+    font-weight: 600;
+    margin-bottom: 1rem;
+  }
+
+  .quick-view-modal__product-description {
+    color: var(--color-text);
+    line-height: 1.6;
+    margin-bottom: 2rem;
+  }
+
+  .quick-view-modal__actions {
+    display: flex;
+    gap: 1rem;
+  }
+
+  .quick-view-modal__add-to-cart {
+    background: var(--color-primary);
+    color: white;
+    border: none;
+    padding: 0.75rem 1.5rem;
+    border-radius: 4px;
+    cursor: pointer;
+    flex: 1;
+  }
+
+  .quick-view-modal__view-full {
+    background: transparent;
+    color: var(--color-primary);
+    border: 1px solid var(--color-primary);
+    padding: 0.75rem 1.5rem;
+    border-radius: 4px;
+    text-decoration: none;
+    text-align: center;
+    flex: 1;
+  }
+
+  .gallery-load-more {
+    text-align: center;
+  }
+
+  .gallery-load-more__btn {
+    background: var(--color-secondary);
+    color: var(--color-primary);
+    border: 2px solid var(--color-primary);
+    padding: 1rem 2rem;
+    border-radius: 25px;
+    cursor: pointer;
+    font-weight: 500;
+    transition: all 0.3s ease;
+  }
+
+  .gallery-load-more__btn:hover {
+    background: var(--color-primary);
+    color: white;
+  }
+
+  @media (max-width: 768px) {
+    .gallery-title {
+      font-size: 2rem;
+    }
+
+    .gallery-grid {
+      grid-template-columns: 1fr;
+      gap: 1.5rem;
+    }
+
+    .gallery-item--wide {
+      grid-column: span 1;
+    }
+
+    .gallery-filter__list {
+      justify-content: flex-start;
+      overflow-x: auto;
+      padding-bottom: 0.5rem;
+    }
+
+    .quick-view-modal__content {
+      flex-direction: column;
+      max-height: 80vh;
+    }
+
+    .quick-view-modal__actions {
+      flex-direction: column;
+    }
+
+    .gallery-modal,
+    .quick-view-modal {
+      padding: 1rem;
+    }
+  }
+</style>

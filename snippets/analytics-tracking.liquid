@@ -1,0 +1,504 @@
+{% comment %}
+  Analytics and Tracking Integration
+  Includes Google Analytics 4, Facebook Pixel, and conversion tracking
+{% endcomment %}
+
+<!-- Google Analytics 4 Enhanced E-commerce -->
+{% if settings.google_analytics_id != blank %}
+  <!-- Google tag (gtag.js) -->
+  <script async src="https://www.googletagmanager.com/gtag/js?id={{ settings.google_analytics_id }}"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+
+    // Configure GA4 with enhanced e-commerce
+    gtag('config', '{{ settings.google_analytics_id }}', {
+      send_page_view: true,
+      currency: '{{ cart.currency.iso_code }}',
+      country: 'IN',
+      custom_map: {
+        'custom_parameter_1': 'product_category',
+        'custom_parameter_2': 'customer_type'
+      },
+      {% if customer %}
+      user_id: '{{ customer.id }}',
+      {% endif %}
+      enhanced_conversions: true
+    });
+
+    // Track page view with additional context
+    gtag('event', 'page_view', {
+      page_title: document.title,
+      page_location: window.location.href,
+      {% if template.name == 'product' %}
+      content_type: 'product',
+      item_id: '{{ product.id }}',
+      item_name: '{{ product.title | escape }}',
+      item_category: '{{ product.type | escape }}',
+      item_brand: '{{ product.vendor | escape }}',
+      price: {{ product.price | money_without_currency | remove: ',' }},
+      currency: '{{ cart.currency.iso_code }}'
+      {% elsif template.name == 'collection' %}
+      content_type: 'collection',
+      item_list_name: '{{ collection.title | escape }}'
+      {% elsif template.name == 'search' %}
+      content_type: 'search',
+      search_term: '{{ search.terms | escape }}'
+      {% endif %}
+    });
+
+    {% if template.name == 'product' %}
+    // Enhanced e-commerce - product view
+    gtag('event', 'view_item', {
+      currency: '{{ cart.currency.iso_code }}',
+      value: {{ product.price | money_without_currency | remove: ',' }},
+      items: [{
+        item_id: '{{ product.id }}',
+        item_name: '{{ product.title | escape }}',
+        item_category: '{{ product.type | escape }}',
+        item_category2: '{{ collection.title | escape }}',
+        item_brand: '{{ product.vendor | escape }}',
+        price: {{ product.price | money_without_currency | remove: ',' }},
+        quantity: 1
+      }]
+    });
+    {% endif %}
+
+    {% if template.name == 'collection' %}
+    // Enhanced e-commerce - view item list
+    gtag('event', 'view_item_list', {
+      item_list_id: '{{ collection.id }}',
+      item_list_name: '{{ collection.title | escape }}',
+      items: [
+        {% for product in collection.products limit: 20 %}
+        {
+          item_id: '{{ product.id }}',
+          item_name: '{{ product.title | escape }}',
+          item_category: '{{ product.type | escape }}',
+          item_brand: '{{ product.vendor | escape }}',
+          price: {{ product.price | money_without_currency | remove: ',' }},
+          index: {{ forloop.index }}
+        }{% unless forloop.last %},{% endunless %}
+        {% endfor %}
+      ]
+    });
+    {% endif %}
+
+    {% if template.name == 'search' %}
+    // Search tracking
+    gtag('event', 'search', {
+      search_term: '{{ search.terms | escape }}',
+      {% if search.results.size > 0 %}
+      search_results: {{ search.results.size }}
+      {% endif %}
+    });
+    {% endif %}
+  </script>
+{% endif %}
+
+<!-- Facebook Pixel -->
+{% if settings.facebook_pixel_id != blank %}
+  <script>
+    !function(f,b,e,v,n,t,s)
+    {if(f.fbq)return;n=f.fbq=function(){n.callMethod?
+    n.callMethod.apply(n,arguments):n.queue.push(arguments)};
+    if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';
+    n.queue=[];t=b.createElement(e);t.async=!0;
+    t.src=v;s=b.getElementsByTagName(e)[0];
+    s.parentNode.insertBefore(t,s)}(window, document,'script',
+    'https://connect.facebook.net/en_US/fbevents.js');
+
+    fbq('init', '{{ settings.facebook_pixel_id }}');
+    fbq('track', 'PageView');
+
+    {% if template.name == 'product' %}
+    // Facebook Pixel - Product view
+    fbq('track', 'ViewContent', {
+      content_type: 'product',
+      content_ids: ['{{ product.id }}'],
+      content_name: '{{ product.title | escape }}',
+      content_category: '{{ product.type | escape }}',
+      value: {{ product.price | money_without_currency | remove: ',' }},
+      currency: '{{ cart.currency.iso_code }}'
+    });
+    {% endif %}
+
+    {% if template.name == 'search' %}
+    // Facebook Pixel - Search
+    fbq('track', 'Search', {
+      search_string: '{{ search.terms | escape }}'
+    });
+    {% endif %}
+  </script>
+
+  <!-- Facebook Pixel noscript -->
+  <noscript>
+    <img height="1" width="1" style="display:none"
+         src="https://www.facebook.com/tr?id={{ settings.facebook_pixel_id }}&ev=PageView&noscript=1"/>
+  </noscript>
+{% endif %}
+
+<!-- Hotjar Heat Mapping -->
+{% if settings.hotjar_id != blank %}
+  <script>
+    (function(h,o,t,j,a,r){
+        h.hj=h.hj||function(){(h.hj.q=h.hj.q||[]).push(arguments)};
+        h._hjSettings={hjid:{{ settings.hotjar_id }},hjsv:6};
+        a=o.getElementsByTagName('head')[0];
+        r=o.createElement('script');r.async=1;
+        r.src=t+h._hjSettings.hjid+j+h._hjSettings.hjsv;
+        a.appendChild(r);
+    })(window,document,'https://static.hotjar.com/c/hotjar-','.js?sv=');
+  </script>
+{% endif %}
+
+<!-- Enhanced E-commerce Event Tracking -->
+<script>
+  // Global analytics helper functions
+  window.KalaAabharanamAnalytics = {
+    // Track add to cart events
+    trackAddToCart: function(productId, productName, category, price, quantity) {
+      // Google Analytics 4
+      if (typeof gtag !== 'undefined') {
+        gtag('event', 'add_to_cart', {
+          currency: '{{ cart.currency.iso_code }}',
+          value: price * quantity,
+          items: [{
+            item_id: productId,
+            item_name: productName,
+            item_category: category,
+            price: price,
+            quantity: quantity
+          }]
+        });
+      }
+
+      // Facebook Pixel
+      if (typeof fbq !== 'undefined') {
+        fbq('track', 'AddToCart', {
+          content_ids: [productId],
+          content_name: productName,
+          content_type: 'product',
+          value: price * quantity,
+          currency: '{{ cart.currency.iso_code }}'
+        });
+      }
+
+      // Hotjar event
+      if (typeof hj !== 'undefined') {
+        hj('event', 'add_to_cart');
+      }
+    },
+
+    // Track remove from cart events
+    trackRemoveFromCart: function(productId, productName, category, price, quantity) {
+      if (typeof gtag !== 'undefined') {
+        gtag('event', 'remove_from_cart', {
+          currency: '{{ cart.currency.iso_code }}',
+          value: price * quantity,
+          items: [{
+            item_id: productId,
+            item_name: productName,
+            item_category: category,
+            price: price,
+            quantity: quantity
+          }]
+        });
+      }
+    },
+
+    // Track begin checkout
+    trackBeginCheckout: function(cartValue, items) {
+      if (typeof gtag !== 'undefined') {
+        gtag('event', 'begin_checkout', {
+          currency: '{{ cart.currency.iso_code }}',
+          value: cartValue,
+          items: items
+        });
+      }
+
+      if (typeof fbq !== 'undefined') {
+        fbq('track', 'InitiateCheckout', {
+          value: cartValue,
+          currency: '{{ cart.currency.iso_code }}',
+          num_items: items.length
+        });
+      }
+    },
+
+    // Track purchase completion
+    trackPurchase: function(transactionId, value, items) {
+      if (typeof gtag !== 'undefined') {
+        gtag('event', 'purchase', {
+          transaction_id: transactionId,
+          value: value,
+          currency: '{{ cart.currency.iso_code }}',
+          items: items
+        });
+      }
+
+      if (typeof fbq !== 'undefined') {
+        fbq('track', 'Purchase', {
+          value: value,
+          currency: '{{ cart.currency.iso_code }}',
+          content_ids: items.map(item => item.item_id),
+          content_type: 'product'
+        });
+      }
+    },
+
+    // Track product clicks
+    trackSelectItem: function(productId, productName, category, listName, index) {
+      if (typeof gtag !== 'undefined') {
+        gtag('event', 'select_item', {
+          item_list_name: listName,
+          items: [{
+            item_id: productId,
+            item_name: productName,
+            item_category: category,
+            index: index
+          }]
+        });
+      }
+    },
+
+    // Track newsletter signup
+    trackNewsletterSignup: function(email) {
+      if (typeof gtag !== 'undefined') {
+        gtag('event', 'sign_up', {
+          method: 'newsletter'
+        });
+      }
+
+      if (typeof fbq !== 'undefined') {
+        fbq('track', 'Subscribe');
+      }
+
+      if (typeof hj !== 'undefined') {
+        hj('event', 'newsletter_signup');
+      }
+    },
+
+    // Track contact form submission
+    trackContactForm: function() {
+      if (typeof gtag !== 'undefined') {
+        gtag('event', 'generate_lead', {
+          currency: '{{ cart.currency.iso_code }}',
+          value: 0
+        });
+      }
+
+      if (typeof fbq !== 'undefined') {
+        fbq('track', 'Lead');
+      }
+    },
+
+    // Track review submission
+    trackReviewSubmission: function(productId, rating) {
+      if (typeof gtag !== 'undefined') {
+        gtag('event', 'review_submitted', {
+          event_category: 'engagement',
+          event_label: 'product_review',
+          product_id: productId,
+          rating: rating
+        });
+      }
+
+      if (typeof hj !== 'undefined') {
+        hj('event', 'review_submitted');
+      }
+    },
+
+    // Track scroll depth
+    trackScrollDepth: function(percentage) {
+      if (typeof gtag !== 'undefined') {
+        gtag('event', 'scroll', {
+          event_category: 'engagement',
+          event_label: percentage + '%'
+        });
+      }
+    },
+
+    // Track time on page
+    trackTimeOnPage: function(seconds) {
+      if (typeof gtag !== 'undefined') {
+        gtag('event', 'timing_complete', {
+          name: 'page_read_time',
+          value: seconds
+        });
+      }
+    }
+  };
+
+  // Automatic scroll depth tracking
+  let scrollDepthTracked = [];
+  window.addEventListener('scroll', function() {
+    const scrollPercent = Math.round((window.scrollY / (document.body.scrollHeight - window.innerHeight)) * 100);
+    
+    [25, 50, 75, 90].forEach(function(depth) {
+      if (scrollPercent >= depth && scrollDepthTracked.indexOf(depth) === -1) {
+        scrollDepthTracked.push(depth);
+        window.KalaAabharanamAnalytics.trackScrollDepth(depth);
+      }
+    });
+  });
+
+  // Track time on page
+  let startTime = Date.now();
+  window.addEventListener('beforeunload', function() {
+    const timeOnPage = Math.round((Date.now() - startTime) / 1000);
+    if (timeOnPage > 10) { // Only track if more than 10 seconds
+      window.KalaAabharanamAnalytics.trackTimeOnPage(timeOnPage);
+    }
+  });
+
+  // Track external link clicks
+  document.addEventListener('click', function(e) {
+    const link = e.target.closest('a');
+    if (link && link.hostname !== window.location.hostname) {
+      if (typeof gtag !== 'undefined') {
+        gtag('event', 'click', {
+          event_category: 'outbound',
+          event_label: link.href,
+          transport_type: 'beacon'
+        });
+      }
+    }
+  });
+
+  // Track file downloads
+  document.addEventListener('click', function(e) {
+    const link = e.target.closest('a');
+    if (link && link.href) {
+      const fileExtensions = ['pdf', 'doc', 'docx', 'xls', 'xlsx', 'zip', 'rar'];
+      const extension = link.href.split('.').pop().toLowerCase();
+      
+      if (fileExtensions.includes(extension)) {
+        if (typeof gtag !== 'undefined') {
+          gtag('event', 'file_download', {
+            event_category: 'engagement',
+            event_label: link.href,
+            file_extension: extension
+          });
+        }
+      }
+    }
+  });
+</script>
+
+<!-- Conversion Tracking for Checkout Success -->
+{% if template.name == 'checkout-success' or template.name contains 'thank' %}
+  <script>
+    // Track purchase completion
+    {% if checkout %}
+    const purchaseItems = [
+      {% for line_item in checkout.line_items %}
+      {
+        item_id: '{{ line_item.product_id }}',
+        item_name: '{{ line_item.title | escape }}',
+        item_category: '{{ line_item.product.type | escape }}',
+        item_brand: '{{ line_item.vendor | escape }}',
+        price: {{ line_item.price | money_without_currency | remove: ',' }},
+        quantity: {{ line_item.quantity }}
+      }{% unless forloop.last %},{% endunless %}
+      {% endfor %}
+    ];
+
+    window.KalaAabharanamAnalytics.trackPurchase(
+      '{{ checkout.order_number }}',
+      {{ checkout.total_price | money_without_currency | remove: ',' }},
+      purchaseItems
+    );
+    {% endif %}
+  </script>
+{% endif %}
+
+<!-- Performance Monitoring -->
+<script>
+  // Core Web Vitals tracking
+  function trackWebVitals() {
+    // Track Largest Contentful Paint (LCP)
+    new PerformanceObserver((entryList) => {
+      for (const entry of entryList.getEntries()) {
+        if (typeof gtag !== 'undefined') {
+          gtag('event', 'web_vitals', {
+            event_category: 'performance',
+            event_label: 'LCP',
+            value: Math.round(entry.startTime)
+          });
+        }
+      }
+    }).observe({entryTypes: ['largest-contentful-paint']});
+
+    // Track First Input Delay (FID)
+    new PerformanceObserver((entryList) => {
+      for (const entry of entryList.getEntries()) {
+        if (typeof gtag !== 'undefined') {
+          gtag('event', 'web_vitals', {
+            event_category: 'performance',
+            event_label: 'FID',
+            value: Math.round(entry.processingStart - entry.startTime)
+          });
+        }
+      }
+    }).observe({entryTypes: ['first-input']});
+
+    // Track Cumulative Layout Shift (CLS)
+    let clsValue = 0;
+    new PerformanceObserver((entryList) => {
+      for (const entry of entryList.getEntries()) {
+        if (!entry.hadRecentInput) {
+          clsValue += entry.value;
+        }
+      }
+    }).observe({entryTypes: ['layout-shift']});
+
+    // Send CLS when page is hidden
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'hidden' && clsValue > 0) {
+        if (typeof gtag !== 'undefined') {
+          gtag('event', 'web_vitals', {
+            event_category: 'performance',
+            event_label: 'CLS',
+            value: Math.round(clsValue * 1000)
+          });
+        }
+      }
+    });
+  }
+
+  // Initialize web vitals tracking
+  if ('PerformanceObserver' in window) {
+    trackWebVitals();
+  }
+</script>
+
+<!-- Error Tracking -->
+<script>
+  // Track JavaScript errors
+  window.addEventListener('error', function(e) {
+    if (typeof gtag !== 'undefined') {
+      gtag('event', 'exception', {
+        description: e.message + ' at ' + e.filename + ':' + e.lineno,
+        fatal: false
+      });
+    }
+  });
+
+  // Track unhandled promise rejections
+  window.addEventListener('unhandledrejection', function(e) {
+    if (typeof gtag !== 'undefined') {
+      gtag('event', 'exception', {
+        description: 'Unhandled promise rejection: ' + e.reason,
+        fatal: false
+      });
+    }
+  });
+</script>
+
+<!-- Preconnect to analytics domains for better performance -->
+<link rel="preconnect" href="https://www.google-analytics.com" crossorigin>
+<link rel="preconnect" href="https://www.googletagmanager.com" crossorigin>
+<link rel="dns-prefetch" href="https://connect.facebook.net">
+<link rel="dns-prefetch" href="https://static.hotjar.com">

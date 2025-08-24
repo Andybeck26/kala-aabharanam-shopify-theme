@@ -1,0 +1,177 @@
+{% comment %}
+  Search Results Template
+  Displays search results with filtering and highlighting
+{% endcomment %}
+
+{% paginate search.results by 24 %}
+  <div class="search-page" x-data="searchPage()">
+    <!-- Search Header -->
+    <div class="search-header">
+      <div class="container">
+        <!-- Breadcrumb Navigation -->
+        <nav class="breadcrumb" aria-label="Breadcrumb">
+          <ol class="breadcrumb__list">
+            <li class="breadcrumb__item">
+              <a href="{{ routes.root_url }}" class="breadcrumb__link">Home</a>
+            </li>
+            <li class="breadcrumb__item">
+              <span class="breadcrumb__current" aria-current="page">Search Results</span>
+            </li>
+          </ol>
+        </nav>
+
+        <!-- Search Hero -->
+        <div class="search-hero">
+          <h1 class="search-title">
+            {% if search.performed %}
+              {% if search.results_count > 0 %}
+                {{ search.results_count }} 
+                {% if search.results_count == 1 %}result{% else %}results{% endif %} 
+                for "{{ search.terms }}"
+              {% else %}
+                No results found for "{{ search.terms }}"
+              {% endif %}
+            {% else %}
+              Search our products
+            {% endif %}
+          </h1>
+
+          <!-- Search Form -->
+          <div class="search-form-container">
+            {% render 'search-form', search_terms: search.terms %}
+          </div>
+        </div>
+
+        <!-- Search Suggestions -->
+        {% if search.performed and search.results_count == 0 %}
+          <div class="search-suggestions">
+            <h2 class="search-suggestions__title">Search suggestions:</h2>
+            <ul class="search-suggestions__list">
+              <li>Check your spelling</li>
+              <li>Try more general keywords</li>
+              <li>Try different keywords</li>
+              <li>Browse our <a href="{{ routes.all_products_collection_url }}">all products</a></li>
+            </ul>
+          </div>
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- Search Results -->
+    {% if search.performed and search.results_count > 0 %}
+      <div class="search-content">
+        <div class="container">
+          <!-- Search Toolbar -->
+          <div class="search-toolbar">
+            <div class="search-results-info">
+              <span class="results-count">
+                Showing {{ paginate.current_offset | plus: 1 }}-{{ paginate.current_offset | plus: paginate.current_page_size }} 
+                of {{ search.results_count }} results
+              </span>
+            </div>
+
+            <!-- Search Filters -->
+            <div class="search-filters">
+              <label for="search-sort" class="search-sort-label">Sort by:</label>
+              <select id="search-sort" class="search-sort-select" @change="updateSort($event.target.value)">
+                <option value="relevance">Relevance</option>
+                <option value="price-ascending">Price: Low to High</option>
+                <option value="price-descending">Price: High to Low</option>
+                <option value="created-descending">Newest</option>
+                <option value="title-ascending">A-Z</option>
+                <option value="title-descending">Z-A</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- Results Grid -->
+          <div class="search-results">
+            {% for item in search.results %}
+              {% case item.object_type %}
+                {% when 'product' %}
+                  <div class="search-result search-result--product">
+                    {% render 'product-card', product: item, show_search_highlight: true %}
+                  </div>
+                {% when 'article' %}
+                  <div class="search-result search-result--article">
+                    {% render 'article-card', article: item, show_search_highlight: true %}
+                  </div>
+                {% when 'page' %}
+                  <div class="search-result search-result--page">
+                    {% render 'page-card', page: item, show_search_highlight: true %}
+                  </div>
+              {% endcase %}
+            {% endfor %}
+          </div>
+
+          <!-- Pagination -->
+          {% if paginate.pages > 1 %}
+            <nav class="pagination" aria-label="Search pagination">
+              <div class="pagination__container">
+                {% if paginate.previous %}
+                  <a href="{{ paginate.previous.url }}" class="pagination__link pagination__prev">
+                    {% render 'icon', icon: 'arrow-left' %}
+                    Previous
+                  </a>
+                {% endif %}
+
+                <div class="pagination__pages">
+                  {% for part in paginate.parts %}
+                    {% if part.is_link %}
+                      <a href="{{ part.url }}" class="pagination__link">{{ part.title }}</a>
+                    {% else %}
+                      {% if part.title == paginate.current_page %}
+                        <span class="pagination__current" aria-current="page">{{ part.title }}</span>
+                      {% else %}
+                        <span class="pagination__ellipsis">{{ part.title }}</span>
+                      {% endif %}
+                    {% endif %}
+                  {% endfor %}
+                </div>
+
+                {% if paginate.next %}
+                  <a href="{{ paginate.next.url }}" class="pagination__link pagination__next">
+                    Next
+                    {% render 'icon', icon: 'arrow-right' %}
+                  </a>
+                {% endif %}
+              </div>
+            </nav>
+          {% endif %}
+        </div>
+      </div>
+    {% endif %}
+
+    <!-- Popular Searches / Trending -->
+    {% unless search.performed %}
+      <div class="search-popular">
+        <div class="container">
+          <h2 class="search-popular__title">Popular Searches</h2>
+          <div class="search-popular__tags">
+            <a href="{{ routes.search_url }}?q=necklace" class="search-tag">Necklaces</a>
+            <a href="{{ routes.search_url }}?q=earrings" class="search-tag">Earrings</a>
+            <a href="{{ routes.search_url }}?q=bangles" class="search-tag">Bangles</a>
+            <a href="{{ routes.search_url }}?q=kalamkari" class="search-tag">Kalamkari</a>
+            <a href="{{ routes.search_url }}?q=gold" class="search-tag">Gold Jewelry</a>
+            <a href="{{ routes.search_url }}?q=oxidized" class="search-tag">Oxidized</a>
+          </div>
+        </div>
+      </div>
+    {% endunless %}
+  </div>
+
+  <script>
+    function searchPage() {
+      return {
+        currentSort: 'relevance',
+        
+        updateSort(sortValue) {
+          this.currentSort = sortValue;
+          const url = new URL(window.location);
+          url.searchParams.set('sort_by', sortValue);
+          window.location.href = url.toString();
+        }
+      }
+    }
+  </script>
+{% endpaginate %}

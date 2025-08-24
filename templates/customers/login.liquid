@@ -1,0 +1,189 @@
+{% comment %}
+  Customer Login Template
+  Provides secure login functionality with form validation and accessibility features
+{% endcomment %}
+
+<div class="customer-auth" x-data="customerAuth()">
+  <div class="container">
+    <div class="customer-auth__container">
+      <!-- Page Header -->
+      <div class="customer-auth__header">
+        <h1 class="customer-auth__title">Welcome Back</h1>
+        <p class="customer-auth__subtitle">Sign in to your Kala Aabharanam account</p>
+      </div>
+
+      <!-- Login Form -->
+      <div class="customer-auth__form-container">
+        {% form 'customer_login', class: 'customer-form', novalidate: 'novalidate' %}
+          {% if form.errors %}
+            <div class="form-errors" role="alert" aria-live="polite">
+              <h2 class="form-errors__title">{{ 'customer.login.error' | t }}</h2>
+              <ul class="form-errors__list">
+                {% for error in form.errors %}
+                  <li class="form-errors__item">{{ error | first | capitalize }} {{ error | last }}</li>
+                {% endfor %}
+              </ul>
+            </div>
+          {% endif %}
+
+          <div class="form-field">
+            <label for="customer-email" class="form-label">
+              {{ 'customer.login.email' | t }}
+              <span class="form-required" aria-label="required">*</span>
+            </label>
+            <input
+              type="email"
+              id="customer-email"
+              name="customer[email]"
+              class="form-input"
+              value="{{ form.email }}"
+              required
+              autocomplete="email"
+              autocapitalize="off"
+              autocorrect="off"
+              aria-describedby="email-error"
+              x-model="email"
+              @blur="validateEmail()"
+            >
+            <div id="email-error" class="form-error" role="alert" x-show="emailError" x-text="emailError"></div>
+          </div>
+
+          <div class="form-field">
+            <label for="customer-password" class="form-label">
+              {{ 'customer.login.password' | t }}
+              <span class="form-required" aria-label="required">*</span>
+            </label>
+            <div class="password-field">
+              <input
+                :type="showPassword ? 'text' : 'password'"
+                id="customer-password"
+                name="customer[password]"
+                class="form-input"
+                required
+                autocomplete="current-password"
+                aria-describedby="password-error"
+                x-model="password"
+                @blur="validatePassword()"
+              >
+              <button
+                type="button"
+                class="password-toggle"
+                @click="showPassword = !showPassword"
+                :aria-label="showPassword ? 'Hide password' : 'Show password'"
+              >
+                {% render 'icon', icon: 'eye' %}
+              </button>
+            </div>
+            <div id="password-error" class="form-error" role="alert" x-show="passwordError" x-text="passwordError"></div>
+          </div>
+
+          <div class="form-actions">
+            <button
+              type="submit"
+              class="btn btn--primary btn--full-width"
+              :disabled="loading || !isFormValid"
+              x-text="loading ? 'Signing In...' : 'Sign In'"
+            ></button>
+          </div>
+
+          <div class="form-links">
+            <a href="{{ routes.account_recover_url }}" class="form-link">
+              {{ 'customer.login.forgot_password' | t }}
+            </a>
+          </div>
+        {% endform %}
+      </div>
+
+      <!-- Registration Link -->
+      <div class="customer-auth__footer">
+        <p class="customer-auth__register-prompt">
+          {{ 'customer.login.no_account' | t }}
+          <a href="{{ routes.account_register_url }}" class="customer-auth__register-link">
+            {{ 'customer.register.title' | t }}
+          </a>
+        </p>
+      </div>
+
+      <!-- Guest Checkout Option -->
+      {% if shop.checkout_api_supported %}
+        <div class="customer-auth__guest">
+          <div class="divider">
+            <span class="divider__text">{{ 'customer.login.or' | t }}</span>
+          </div>
+          <a href="{{ routes.cart_url }}" class="btn btn--secondary btn--full-width">
+            {{ 'customer.login.guest_checkout' | t }}
+          </a>
+        </div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+
+<script>
+  function customerAuth() {
+    return {
+      email: '{{ form.email | escape }}',
+      password: '',
+      showPassword: false,
+      loading: false,
+      emailError: '',
+      passwordError: '',
+
+      get isFormValid() {
+        return this.email && this.password && !this.emailError && !this.passwordError;
+      },
+
+      validateEmail() {
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        
+        if (!this.email) {
+          this.emailError = 'Email is required';
+        } else if (!emailRegex.test(this.email)) {
+          this.emailError = 'Please enter a valid email address';
+        } else {
+          this.emailError = '';
+        }
+      },
+
+      validatePassword() {
+        if (!this.password) {
+          this.passwordError = 'Password is required';
+        } else if (this.password.length < 6) {
+          this.passwordError = 'Password must be at least 6 characters';
+        } else {
+          this.passwordError = '';
+        }
+      },
+
+      init() {
+        // Focus first input on load
+        this.$nextTick(() => {
+          document.getElementById('customer-email').focus();
+        });
+
+        // Track analytics
+        if (window.KalaAabharanam?.Analytics) {
+          window.KalaAabharanam.Analytics.trackPageView('Customer Login', window.location.href);
+        }
+      }
+    }
+  }
+</script>
+
+{% schema %}
+{
+  "name": "Customer Login",
+  "settings": [
+    {
+      "type": "header",
+      "content": "Login Page Settings"
+    },
+    {
+      "type": "checkbox",
+      "id": "show_guest_checkout",
+      "label": "Show guest checkout option",
+      "default": true
+    }
+  ]
+}
+{% endschema %}

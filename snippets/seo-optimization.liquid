@@ -1,0 +1,446 @@
+{% comment %}
+  SEO Optimization and Meta Tags
+  Comprehensive SEO implementation with structured data, meta tags, and optimization
+{% endcomment %}
+
+<!-- Enhanced Meta Tags -->
+{% liquid
+  if page_description
+    assign meta_description = page_description | escape
+  elsif template.name == 'index'
+    assign meta_description = 'Discover premium artificial jewellery and authentic Kalamkari textiles at Kala Aabharanam. Shop traditional designs with modern elegance. Free shipping on orders over ₹999.' | escape
+  elsif template.name == 'product'
+    assign meta_description = product.description | strip_html | truncate: 155 | escape
+  elsif template.name == 'collection'
+    if collection.description != blank
+      assign meta_description = collection.description | strip_html | truncate: 155 | escape
+    else
+      assign meta_description = 'Browse our ' | append: collection.title | append: ' collection featuring premium artificial jewellery and traditional textiles.' | escape
+    endif
+  elsif template.name == 'blog'
+    assign meta_description = blog.summary | default: 'Read our latest articles about traditional jewellery, fashion trends, and cultural heritage at Kala Aabharanam.' | strip_html | truncate: 155 | escape
+  elsif template.name == 'article'
+    assign meta_description = article.summary | default: article.content | strip_html | truncate: 155 | escape
+  else
+    assign meta_description = shop.description | default: 'Premium artificial jewellery and Kalamkari textiles' | strip_html | truncate: 155 | escape
+  endif
+%}
+
+<!-- Canonical URL -->
+{%- if canonical_url != blank -%}
+  <link rel="canonical" href="{{ canonical_url }}">
+{%- endif -%}
+
+<!-- Robots Meta -->
+{% if template.name == 'search' or template.name contains 'customers' %}
+  <meta name="robots" content="noindex,nofollow">
+{% else %}
+  <meta name="robots" content="index,follow,max-image-preview:large,max-snippet:-1,max-video-preview:-1">
+{% endif %}
+
+<!-- Additional SEO Meta Tags -->
+<meta name="author" content="{{ shop.name }}">
+<meta name="copyright" content="© {{ 'now' | date: '%Y' }} {{ shop.name }}">
+<meta name="language" content="{{ request.locale.iso_code }}">
+<meta name="geo.region" content="IN">
+<meta name="geo.country" content="India">
+
+<!-- Open Graph Enhanced -->
+<meta property="og:site_name" content="{{ shop.name }}">
+<meta property="og:url" content="{{ canonical_url | default: shop.url }}">
+<meta property="og:type" content="{% if template.name == 'product' %}product{% elsif template.name == 'article' %}article{% else %}website{% endif %}">
+<meta property="og:title" content="{{ page_title | default: shop.name }}">
+<meta property="og:description" content="{{ meta_description }}">
+<meta property="og:locale" content="{{ request.locale.iso_code }}_{{ request.locale.iso_code | upcase }}">
+
+{%- if template.name == 'product' and product.featured_image -%}
+  <meta property="og:image" content="https:{{ product.featured_image | image_url: width: 1200 }}">
+  <meta property="og:image:secure_url" content="https:{{ product.featured_image | image_url: width: 1200 }}">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="1200">
+  <meta property="og:image:alt" content="{{ product.featured_image.alt | default: product.title | escape }}">
+  
+  <!-- Product specific Open Graph -->
+  <meta property="product:brand" content="{{ product.vendor | escape }}">
+  <meta property="product:availability" content="{% if product.available %}in stock{% else %}out of stock{% endif %}">
+  <meta property="product:condition" content="new">
+  <meta property="product:price:amount" content="{{ product.price | money_without_currency | remove: ',' }}">
+  <meta property="product:price:currency" content="{{ cart.currency.iso_code }}">
+  <meta property="product:retailer_item_id" content="{{ product.id }}">
+  
+{%- elsif template.name == 'article' and article.image -%}
+  <meta property="og:image" content="https:{{ article.image | image_url: width: 1200 }}">
+  <meta property="og:image:secure_url" content="https:{{ article.image | image_url: width: 1200 }}">
+  <meta property="og:image:alt" content="{{ article.image.alt | default: article.title | escape }}">
+  
+  <!-- Article specific Open Graph -->
+  <meta property="article:published_time" content="{{ article.published_at | date: '%Y-%m-%dT%H:%M:%S%z' }}">
+  <meta property="article:modified_time" content="{{ article.updated_at | date: '%Y-%m-%dT%H:%M:%S%z' }}">
+  <meta property="article:author" content="{{ article.author }}">
+  <meta property="article:section" content="{{ blog.title }}">
+  {% for tag in article.tags %}
+    <meta property="article:tag" content="{{ tag }}">
+  {% endfor %}
+  
+{%- elsif settings.share_image -%}
+  <meta property="og:image" content="https:{{ settings.share_image | image_url: width: 1200 }}">
+  <meta property="og:image:secure_url" content="https:{{ settings.share_image | image_url: width: 1200 }}">
+{%- endif -%}
+
+<!-- Twitter Card Enhanced -->
+<meta name="twitter:card" content="{% if template.name == 'product' or template.name == 'article' %}summary_large_image{% else %}summary{% endif %}">
+<meta name="twitter:site" content="@{{ settings.social_twitter_handle | default: 'kalaaabharanam' }}">
+<meta name="twitter:creator" content="@{{ settings.social_twitter_handle | default: 'kalaaabharanam' }}">
+<meta name="twitter:title" content="{{ page_title | default: shop.name }}">
+<meta name="twitter:description" content="{{ meta_description }}">
+
+{%- if template.name == 'product' and product.featured_image -%}
+  <meta name="twitter:image" content="https:{{ product.featured_image | image_url: width: 1200 }}">
+  <meta name="twitter:image:alt" content="{{ product.featured_image.alt | default: product.title | escape }}">
+  
+  <!-- Twitter Product Card -->
+  <meta name="twitter:label1" content="Price">
+  <meta name="twitter:data1" content="{{ product.price | money }}">
+  <meta name="twitter:label2" content="Availability">
+  <meta name="twitter:data2" content="{% if product.available %}In Stock{% else %}Out of Stock{% endif %}">
+  
+{%- elsif template.name == 'article' and article.image -%}
+  <meta name="twitter:image" content="https:{{ article.image | image_url: width: 1200 }}">
+  <meta name="twitter:image:alt" content="{{ article.image.alt | default: article.title | escape }}">
+{%- endif -%}
+
+<!-- JSON-LD Structured Data -->
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "Organization",
+      "@id": "{{ shop.url }}#organization",
+      "name": "{{ shop.name }}",
+      "url": "{{ shop.url }}",
+      {% if settings.logo %}
+      "logo": {
+        "@type": "ImageObject",
+        "url": "{{ settings.logo | image_url: width: 300 }}",
+        "width": 300,
+        "height": 100
+      },
+      {% endif %}
+      "description": "{{ shop.description | default: 'Premium artificial jewellery and authentic Kalamkari textiles' | escape }}",
+      "address": {
+        "@type": "PostalAddress",
+        "addressCountry": "IN",
+        "addressRegion": "India"
+      },
+      "contactPoint": {
+        "@type": "ContactPoint",
+        "telephone": "{{ settings.contact_phone | default: '+91-XXXXXXXXXX' }}",
+        "contactType": "customer service",
+        "availableLanguage": ["English", "Hindi"]
+      },
+      "sameAs": [
+        {% if settings.social_facebook_link != blank %}"{{ settings.social_facebook_link }}",{% endif %}
+        {% if settings.social_instagram_link != blank %}"{{ settings.social_instagram_link }}",{% endif %}
+        {% if settings.social_twitter_link != blank %}"{{ settings.social_twitter_link }}",{% endif %}
+        {% if settings.social_pinterest_link != blank %}"{{ settings.social_pinterest_link }}"{% endif %}
+      ]
+    },
+    {
+      "@type": "WebSite",
+      "@id": "{{ shop.url }}#website",
+      "url": "{{ shop.url }}",
+      "name": "{{ shop.name }}",
+      "description": "{{ meta_description }}",
+      "publisher": {
+        "@id": "{{ shop.url }}#organization"
+      },
+      "potentialAction": {
+        "@type": "SearchAction",
+        "target": {
+          "@type": "EntryPoint",
+          "urlTemplate": "{{ shop.url }}/search?q={search_term_string}"
+        },
+        "query-input": "required name=search_term_string"
+      }
+    }
+    {% if template.name == 'index' %},
+    {
+      "@type": "WebPage",
+      "@id": "{{ shop.url }}#webpage",
+      "url": "{{ shop.url }}",
+      "name": "{{ page_title }}",
+      "isPartOf": {
+        "@id": "{{ shop.url }}#website"
+      },
+      "about": {
+        "@id": "{{ shop.url }}#organization"
+      },
+      "description": "{{ meta_description }}"
+    }
+    {% endif %}
+    {% if template.name == 'product' %},
+    {
+      "@type": "Product",
+      "@id": "{{ shop.url }}{{ product.url }}#product",
+      "name": "{{ product.title | escape }}",
+      "description": "{{ product.description | strip_html | escape }}",
+      "image": [
+        {% for image in product.images limit: 5 %}
+          "{{ image | image_url: width: 1200 }}"{% unless forloop.last %},{% endunless %}
+        {% endfor %}
+      ],
+      "brand": {
+        "@type": "Brand",
+        "name": "{{ product.vendor | default: shop.name | escape }}"
+      },
+      "manufacturer": {
+        "@id": "{{ shop.url }}#organization"
+      },
+      "offers": {
+        "@type": "Offer",
+        "url": "{{ shop.url }}{{ product.url }}",
+        "priceCurrency": "{{ cart.currency.iso_code }}",
+        "price": "{{ product.price | money_without_currency | remove: ',' }}",
+        {% if product.compare_at_price > product.price %}
+        "priceValidUntil": "{{ 'now' | date: '%Y' | plus: 1 }}-12-31",
+        {% endif %}
+        "availability": "https://schema.org/{% if product.available %}InStock{% else %}OutOfStock{% endif %}",
+        "itemCondition": "https://schema.org/NewCondition",
+        "seller": {
+          "@id": "{{ shop.url }}#organization"
+        }
+      },
+      "sku": "{{ product.selected_or_first_available_variant.sku }}",
+      "gtin": "{{ product.selected_or_first_available_variant.barcode }}",
+      {% if product.metafields.custom.material %}
+      "material": "{{ product.metafields.custom.material | escape }}",
+      {% endif %}
+      {% if product.metafields.custom.country_of_origin %}
+      "countryOfOrigin": "{{ product.metafields.custom.country_of_origin | escape }}",
+      {% endif %}
+      "category": "{{ product.type | escape }}",
+      "aggregateRating": {
+        "@type": "AggregateRating",
+        "ratingValue": "4.5",
+        "reviewCount": "{{ product.metafields.judgeme.review_count | default: 0 }}"
+      }
+    }
+    {% endif %}
+    {% if template.name == 'collection' %},
+    {
+      "@type": "CollectionPage",
+      "@id": "{{ shop.url }}{{ collection.url }}#collectionpage",
+      "url": "{{ shop.url }}{{ collection.url }}",
+      "name": "{{ collection.title | escape }}",
+      "description": "{{ collection.description | strip_html | escape }}",
+      "isPartOf": {
+        "@id": "{{ shop.url }}#website"
+      },
+      "mainEntity": {
+        "@type": "ItemList",
+        "numberOfItems": {{ collection.products_count }},
+        "itemListElement": [
+          {% for product in collection.products limit: 20 %}
+          {
+            "@type": "ListItem",
+            "position": {{ forloop.index }},
+            "item": {
+              "@type": "Product",
+              "name": "{{ product.title | escape }}",
+              "url": "{{ shop.url }}{{ product.url }}",
+              "image": "{{ product.featured_image | image_url: width: 600 }}",
+              "offers": {
+                "@type": "Offer",
+                "price": "{{ product.price | money_without_currency | remove: ',' }}",
+                "priceCurrency": "{{ cart.currency.iso_code }}",
+                "availability": "https://schema.org/{% if product.available %}InStock{% else %}OutOfStock{% endif %}"
+              }
+            }
+          }{% unless forloop.last %},{% endunless %}
+          {% endfor %}
+        ]
+      }
+    }
+    {% endif %}
+    {% if template.name == 'article' %},
+    {
+      "@type": "Article",
+      "@id": "{{ shop.url }}{{ article.url }}#article",
+      "headline": "{{ article.title | escape }}",
+      "description": "{{ article.summary | default: article.content | strip_html | truncate: 155 | escape }}",
+      "image": {% if article.image %}"{{ article.image | image_url: width: 1200 }}"{% else %}"{{ settings.share_image | image_url: width: 1200 }}"{% endif %},
+      "datePublished": "{{ article.published_at | date: '%Y-%m-%dT%H:%M:%S%z' }}",
+      "dateModified": "{{ article.updated_at | date: '%Y-%m-%dT%H:%M:%S%z' }}",
+      "author": {
+        "@type": "Person",
+        "name": "{{ article.author }}"
+      },
+      "publisher": {
+        "@id": "{{ shop.url }}#organization"
+      },
+      "mainEntityOfPage": {
+        "@type": "WebPage",
+        "@id": "{{ shop.url }}{{ article.url }}"
+      },
+      "articleSection": "{{ blog.title }}",
+      "keywords": "{{ article.tags | join: ', ' }}"
+    }
+    {% endif %}
+  ]
+}
+</script>
+
+<!-- Breadcrumb Structured Data -->
+{% if template.name == 'product' or template.name == 'collection' or template.name == 'article' %}
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "BreadcrumbList",
+  "itemListElement": [
+    {
+      "@type": "ListItem",
+      "position": 1,
+      "name": "Home",
+      "item": "{{ shop.url }}"
+    }
+    {% if template.name == 'product' and collection %},
+    {
+      "@type": "ListItem",
+      "position": 2,
+      "name": "{{ collection.title | escape }}",
+      "item": "{{ shop.url }}{{ collection.url }}"
+    },
+    {
+      "@type": "ListItem",
+      "position": 3,
+      "name": "{{ product.title | escape }}",
+      "item": "{{ shop.url }}{{ product.url }}"
+    }
+    {% elsif template.name == 'collection' %},
+    {
+      "@type": "ListItem",
+      "position": 2,
+      "name": "{{ collection.title | escape }}",
+      "item": "{{ shop.url }}{{ collection.url }}"
+    }
+    {% elsif template.name == 'article' %},
+    {
+      "@type": "ListItem",
+      "position": 2,
+      "name": "{{ blog.title | escape }}",
+      "item": "{{ shop.url }}{{ blog.url }}"
+    },
+    {
+      "@type": "ListItem",
+      "position": 3,
+      "name": "{{ article.title | escape }}",
+      "item": "{{ shop.url }}{{ article.url }}"
+    }
+    {% endif %}
+  ]
+}
+</script>
+{% endif %}
+
+<!-- FAQ Structured Data for FAQ pages -->
+{% if template.name == 'page' and page.handle == 'faq' %}
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  "mainEntity": [
+    {
+      "@type": "Question",
+      "name": "What materials are used in your jewellery?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Our artificial jewellery is crafted using high-quality materials including gold-plated brass, silver-plated alloys, and premium artificial stones. Each piece is designed to be durable and maintain its beauty over time."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "Do you offer international shipping?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Currently, we ship within India. We offer free shipping on orders over ₹999 and express delivery options for faster delivery."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "What is your return policy?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "We offer a 30-day return policy for all items in their original condition. Items must be unworn and in original packaging for a full refund."
+      }
+    }
+  ]
+}
+</script>
+{% endif %}
+
+<!-- Local Business Structured Data -->
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "LocalBusiness",
+  "name": "{{ shop.name }}",
+  "image": "{% if settings.logo %}{{ settings.logo | image_url: width: 300 }}{% endif %}",
+  "url": "{{ shop.url }}",
+  "telephone": "{{ settings.contact_phone | default: '+91-XXXXXXXXXX' }}",
+  "email": "{{ settings.contact_email | default: 'hello@kalaaabharanam.com' }}",
+  "address": {
+    "@type": "PostalAddress",
+    "addressCountry": "IN"
+  },
+  "geo": {
+    "@type": "GeoCoordinates",
+    "latitude": "{{ settings.store_latitude | default: '28.6139' }}",
+    "longitude": "{{ settings.store_longitude | default: '77.2090' }}"
+  },
+  "openingHoursSpecification": [
+    {
+      "@type": "OpeningHoursSpecification",
+      "dayOfWeek": ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"],
+      "opens": "09:00",
+      "closes": "18:00"
+    },
+    {
+      "@type": "OpeningHoursSpecification",
+      "dayOfWeek": "Saturday",
+      "opens": "10:00",
+      "closes": "16:00"
+    }
+  ],
+  "priceRange": "₹₹",
+  "paymentAccepted": ["Cash", "Credit Card", "Debit Card", "UPI", "Net Banking"],
+  "currenciesAccepted": "INR"
+}
+</script>
+
+<!-- Hreflang for International SEO (if applicable) -->
+{% comment %}
+{% if settings.enable_international %}
+  <link rel="alternate" hreflang="en-in" href="{{ canonical_url }}">
+  <link rel="alternate" hreflang="hi-in" href="{{ canonical_url | replace: '/en/', '/hi/' }}">
+  <link rel="alternate" hreflang="x-default" href="{{ canonical_url }}">
+{% endif %}
+{% endcomment %}
+
+<!-- Preload critical resources -->
+<link rel="preload" href="{{ 'application.css' | asset_url }}" as="style">
+<link rel="preload" href="{{ settings.type_body_font | font_url }}" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="{{ settings.type_header_font | font_url }}" as="font" type="font/woff2" crossorigin>
+
+<!-- DNS prefetch for external resources -->
+<link rel="dns-prefetch" href="//fonts.googleapis.com">
+<link rel="dns-prefetch" href="//fonts.gstatic.com">
+<link rel="dns-prefetch" href="//cdn.shopify.com">
+
+<!-- Sitemap reference -->
+<link rel="sitemap" type="application/xml" title="Sitemap" href="{{ shop.url }}/sitemap.xml">
+
+<!-- RSS feed for blog -->
+{% if blog %}
+<link rel="alternate" type="application/rss+xml" title="{{ blog.title }} RSS" href="{{ blog.url }}.atom">
+{% endif %}

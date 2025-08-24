@@ -1,0 +1,261 @@
+{% comment %}
+  Responsive Image Snippet with Performance Optimizations
+  
+  Parameters:
+  - image: Image object (required)
+  - alt: Alt text (optional, defaults to image.alt)
+  - class: CSS classes (optional)
+  - sizes: Sizes attribute (optional)
+  - loading: Loading attribute (optional, defaults to 'lazy')
+  - fetchpriority: Fetch priority (optional)
+  - width: Max width (optional)
+  - height: Max height (optional)
+  - aspect_ratio: Aspect ratio (optional, e.g., '1:1', '4:3', '16:9')
+  - placeholder: Show placeholder if no image (optional, defaults to true)
+{% endcomment %}
+
+{%- liquid
+  assign image_alt = alt | default: image.alt | default: ''
+  assign image_class = class | default: ''
+  assign image_loading = loading | default: 'lazy'
+  assign image_sizes = sizes | default: '(min-width: 1200px) 1200px, (min-width: 768px) 768px, 100vw'
+  assign max_width = width | default: 1200
+  assign max_height = height | default: 1200
+  assign show_placeholder = placeholder | default: true
+  
+  # Calculate aspect ratio padding if provided
+  assign aspect_padding = 0
+  if aspect_ratio
+    assign ratio_parts = aspect_ratio | split: ':'
+    assign ratio_width = ratio_parts[0] | times: 1.0
+    assign ratio_height = ratio_parts[1] | times: 1.0
+    assign aspect_padding = ratio_height | divided_by: ratio_width | times: 100
+  endif
+-%}
+
+{%- if image -%}
+  <div class="responsive-image{% if image_class != blank %} {{ image_class }}{% endif %}{% if aspect_ratio %} responsive-image--aspect-ratio{% endif %}"
+       {% if aspect_ratio %}style="--aspect-padding: {{ aspect_padding }}%"{% endif %}>
+    
+    {%- comment -%} Generate srcset for different screen sizes {%- endcomment -%}
+    {%- assign srcset_sizes = '300,400,600,800,1000,1200,1400,1600' | split: ',' -%}
+    {%- assign srcset_webp = '' -%}
+    {%- assign srcset_jpg = '' -%}
+    
+    {%- for size in srcset_sizes -%}
+      {%- assign size_int = size | times: 1 -%}
+      {%- if size_int <= max_width -%}
+        {%- assign webp_url = image | image_url: width: size_int, format: 'webp' -%}
+        {%- assign jpg_url = image | image_url: width: size_int -%}
+        
+        {%- if srcset_webp != blank -%}
+          {%- assign srcset_webp = srcset_webp | append: ', ' -%}
+        {%- endif -%}
+        {%- assign srcset_webp = srcset_webp | append: webp_url | append: ' ' | append: size | append: 'w' -%}
+        
+        {%- if srcset_jpg != blank -%}
+          {%- assign srcset_jpg = srcset_jpg | append: ', ' -%}
+        {%- endif -%}
+        {%- assign srcset_jpg = srcset_jpg | append: jpg_url | append: ' ' | append: size | append: 'w' -%}
+      {%- endif -%}
+    {%- endfor -%}
+    
+    <picture class="responsive-image__picture">
+      {%- comment -%} WebP source for modern browsers {%- endcomment -%}
+      <source type="image/webp" 
+              srcset="{{ srcset_webp }}"
+              sizes="{{ image_sizes }}">
+      
+      {%- comment -%} Fallback JPEG source {%- endcomment -%}
+      <source type="image/jpeg" 
+              srcset="{{ srcset_jpg }}"
+              sizes="{{ image_sizes }}">
+      
+      {%- comment -%} Main image element {%- endcomment -%}
+      <img src="{{ image | image_url: width: 800 }}"
+           srcset="{{ srcset_jpg }}"
+           sizes="{{ image_sizes }}"
+           alt="{{ image_alt | escape }}"
+           class="responsive-image__img"
+           loading="{{ image_loading }}"
+           {% if fetchpriority %}fetchpriority="{{ fetchpriority }}"{% endif %}
+           {% if image.width %}width="{{ image.width }}"{% endif %}
+           {% if image.height %}height="{{ image.height }}"{% endif %}
+           decoding="async"
+           onload="this.classList.add('loaded')"
+           onerror="this.classList.add('error')">
+    </picture>
+    
+    {%- comment -%} Loading placeholder {%- endcomment -%}
+    <div class="responsive-image__placeholder" aria-hidden="true">
+      <svg class="responsive-image__placeholder-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M21 19V5C21 3.9 20.1 3 19 3H5C3.9 3 3 3.9 3 5V19C3 20.1 3.9 21 5 21H19C20.1 21 21 20.1 21 19ZM8.5 13.5L11 16.51L14.5 12L19 18H5L8.5 13.5Z" fill="currentColor"/>
+      </svg>
+    </div>
+  </div>
+
+{%- elsif show_placeholder -%}
+  {%- comment -%} Show placeholder when no image is provided {%- endcomment -%}
+  <div class="responsive-image responsive-image--placeholder{% if image_class != blank %} {{ image_class }}{% endif %}{% if aspect_ratio %} responsive-image--aspect-ratio{% endif %}"
+       {% if aspect_ratio %}style="--aspect-padding: {{ aspect_padding }}%"{% endif %}>
+    <div class="responsive-image__placeholder responsive-image__placeholder--no-image" aria-hidden="true">
+      <svg class="responsive-image__placeholder-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M21 19V5C21 3.9 20.1 3 19 3H5C3.9 3 3 3.9 3 5V19C3 20.1 3.9 21 5 21H19C20.1 21 21 20.1 21 19ZM8.5 13.5L11 16.51L14.5 12L19 18H5L8.5 13.5Z" fill="currentColor"/>
+      </svg>
+    </div>
+  </div>
+{%- endif -%}
+
+{%- comment -%} Inline CSS for responsive image component {%- endcomment -%}
+<style>
+  .responsive-image {
+    position: relative;
+    display: block;
+    overflow: hidden;
+    background-color: var(--color-background-secondary, #f5f5f5);
+  }
+  
+  .responsive-image--aspect-ratio {
+    height: 0;
+    padding-bottom: var(--aspect-padding, 100%);
+  }
+  
+  .responsive-image__picture {
+    display: block;
+    width: 100%;
+    height: 100%;
+  }
+  
+  .responsive-image--aspect-ratio .responsive-image__picture {
+    position: absolute;
+    top: 0;
+    left: 0;
+  }
+  
+  .responsive-image__img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+  }
+  
+  .responsive-image__img.loaded {
+    opacity: 1;
+  }
+  
+  .responsive-image__img.error {
+    opacity: 0.5;
+  }
+  
+  .responsive-image__placeholder {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background-color: var(--color-background-secondary, #f5f5f5);
+    color: var(--color-text-secondary, #666);
+    transition: opacity 0.3s ease;
+  }
+  
+  .responsive-image__img.loaded + .responsive-image__placeholder {
+    opacity: 0;
+    pointer-events: none;
+  }
+  
+  .responsive-image__placeholder--no-image {
+    position: static;
+    min-height: 200px;
+  }
+  
+  .responsive-image__placeholder-icon {
+    width: 48px;
+    height: 48px;
+    opacity: 0.5;
+  }
+  
+  /* Loading animation */
+  .responsive-image__placeholder::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(
+      90deg,
+      transparent,
+      rgba(255, 255, 255, 0.4),
+      transparent
+    );
+    animation: loading-shimmer 1.5s infinite;
+  }
+  
+  .responsive-image__img.loaded + .responsive-image__placeholder::before {
+    animation: none;
+  }
+  
+  @keyframes loading-shimmer {
+    0% {
+      left: -100%;
+    }
+    100% {
+      left: 100%;
+    }
+  }
+  
+  /* High contrast mode support */
+  @media (prefers-contrast: high) {
+    .responsive-image__placeholder {
+      border: 1px solid currentColor;
+    }
+  }
+  
+  /* Reduced motion support */
+  @media (prefers-reduced-motion: reduce) {
+    .responsive-image__img,
+    .responsive-image__placeholder,
+    .responsive-image__placeholder::before {
+      transition: none;
+      animation: none;
+    }
+  }
+</style>
+
+{%- comment -%} 
+  Intersection Observer for lazy loading optimization
+  Only load this script once per page
+{%- endcomment -%}
+{%- unless request.page_type == 'search' or request.page_type == 'cart' -%}
+  <script>
+    if (!window.responsiveImageObserver) {
+      window.responsiveImageObserver = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+          if (entry.isIntersecting) {
+            const img = entry.target.querySelector('.responsive-image__img');
+            if (img && img.loading === 'lazy') {
+              // Force load the image by setting src if not already loaded
+              if (!img.complete) {
+                const src = img.getAttribute('src');
+                img.src = src;
+              }
+            }
+            window.responsiveImageObserver.unobserve(entry.target);
+          }
+        });
+      }, {
+        rootMargin: '50px 0px',
+        threshold: 0.1
+      });
+      
+      // Observe all responsive images
+      document.querySelectorAll('.responsive-image').forEach(img => {
+        window.responsiveImageObserver.observe(img);
+      });
+    }
+  </script>
+{%- endunless -%}

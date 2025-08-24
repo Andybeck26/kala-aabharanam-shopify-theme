@@ -1,0 +1,177 @@
+{% comment %}
+  Search Form Component
+  Provides search functionality with auto-suggestions
+  Parameters:
+  - search_terms: Current search terms (optional)
+  - placeholder: Placeholder text (optional)
+  - show_suggestions: Enable auto-suggestions (optional, default: true)
+{% endcomment %}
+
+{% assign placeholder_text = placeholder | default: 'Search products, articles, and more...' %}
+{% assign enable_suggestions = show_suggestions | default: true %}
+
+<div class="search-form" x-data="searchForm()">
+  <form action="{{ routes.search_url }}" method="get" class="search-form__form" role="search">
+    <div class="search-form__input-wrapper">
+      <label for="search-input" class="visually-hidden">Search</label>
+      <input
+        type="search"
+        id="search-input"
+        name="q"
+        value="{{ search_terms | escape }}"
+        placeholder="{{ placeholder_text }}"
+        class="search-form__input"
+        autocomplete="off"
+        autocorrect="off"
+        autocapitalize="off"
+        spellcheck="false"
+        x-model="searchQuery"
+        @input="handleInput()"
+        @focus="showSuggestions = true"
+        @keydown.escape="hideSuggestions()"
+        @keydown.arrow-down.prevent="navigateSuggestions(1)"
+        @keydown.arrow-up.prevent="navigateSuggestions(-1)"
+        @keydown.enter.prevent="selectSuggestion()"
+      >
+      
+      <button type="submit" class="search-form__submit" aria-label="Search">
+        {% render 'icon', icon: 'search' %}
+      </button>
+
+      {% if search_terms != blank %}
+        <button 
+          type="button" 
+          class="search-form__clear"
+          @click="clearSearch()"
+          aria-label="Clear search"
+        >
+          {% render 'icon', icon: 'close' %}
+        </button>
+      {% endif %}
+    </div>
+
+    <!-- Search Suggestions -->
+    {% if enable_suggestions %}
+      <div 
+        class="search-suggestions"
+        x-show="showSuggestions && suggestions.length > 0"
+        x-transition
+        @click.away="hideSuggestions()"
+      >
+        <ul class="search-suggestions__list" role="listbox">
+          <template x-for="(suggestion, index) in suggestions" :key="suggestion.id">
+            <li 
+              class="search-suggestions__item"
+              :class="{ 'search-suggestions__item--active': index === activeIndex }"
+              @click="selectSuggestionItem(suggestion)"
+              @mouseenter="activeIndex = index"
+              role="option"
+              :aria-selected="index === activeIndex"
+            >
+              <div class="search-suggestion">
+                <div class="search-suggestion__image" x-show="suggestion.image">
+                  <img 
+                    :src="suggestion.image" 
+                    :alt="suggestion.title"
+                    class="search-suggestion__img"
+                    loading="lazy"
+                  >
+                </div>
+                <div class="search-suggestion__content">
+                  <div class="search-suggestion__title" x-text="suggestion.title"></div>
+                  <div class="search-suggestion__type" x-text="suggestion.type"></div>
+                  <div class="search-suggestion__price" x-show="suggestion.price" x-text="suggestion.price"></div>
+                </div>
+              </div>
+            </li>
+          </template>
+        </ul>
+      </div>
+    {% endif %}
+  </form>
+</div>
+
+<script>
+  function searchForm() {
+    return {
+      searchQuery: '{{ search_terms | escape }}',
+      suggestions: [],
+      showSuggestions: false,
+      activeIndex: -1,
+      debounceTimer: null,
+
+      handleInput() {
+        clearTimeout(this.debounceTimer);
+        
+        if (this.searchQuery.length < 2) {
+          this.suggestions = [];
+          this.showSuggestions = false;
+          return;
+        }
+
+        this.debounceTimer = setTimeout(() => {
+          this.fetchSuggestions();
+        }, 300);
+      },
+
+      async fetchSuggestions() {
+        try {
+          const response = await fetch(`{{ routes.search_url }}?q=${encodeURIComponent(this.searchQuery)}&view=suggestions`);
+          
+          if (response.ok) {
+            const data = await response.json();
+            this.suggestions = data.suggestions || [];
+            this.showSuggestions = this.suggestions.length > 0;
+            this.activeIndex = -1;
+          }
+        } catch (error) {
+          console.error('Error fetching search suggestions:', error);
+          this.suggestions = [];
+          this.showSuggestions = false;
+        }
+      },
+
+      navigateSuggestions(direction) {
+        if (!this.showSuggestions || this.suggestions.length === 0) return;
+
+        this.activeIndex += direction;
+        
+        if (this.activeIndex < -1) {
+          this.activeIndex = this.suggestions.length - 1;
+        } else if (this.activeIndex >= this.suggestions.length) {
+          this.activeIndex = -1;
+        }
+      },
+
+      selectSuggestion() {
+        if (this.activeIndex >= 0 && this.suggestions[this.activeIndex]) {
+          this.selectSuggestionItem(this.suggestions[this.activeIndex]);
+        } else {
+          // Submit the form with current query
+          this.$el.querySelector('form').submit();
+        }
+      },
+
+      selectSuggestionItem(suggestion) {
+        if (suggestion.url) {
+          window.location.href = suggestion.url;
+        } else {
+          this.searchQuery = suggestion.title;
+          this.$el.querySelector('form').submit();
+        }
+      },
+
+      hideSuggestions() {
+        this.showSuggestions = false;
+        this.activeIndex = -1;
+      },
+
+      clearSearch() {
+        this.searchQuery = '';
+        this.suggestions = [];
+        this.showSuggestions = false;
+        this.$el.querySelector('input').focus();
+      }
+    }
+  }
+</script>

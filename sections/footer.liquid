@@ -1,0 +1,334 @@
+{{ 'section-footer.css' | asset_url | stylesheet_tag }}
+
+<footer class="footer" role="contentinfo">
+  <div class="footer__container page-width">
+    <!-- Main Footer Content -->
+    <div class="footer__content">
+      <!-- Brand Section -->
+      <div class="footer__section footer__brand">
+        <div class="footer__logo">
+          {%- if settings.logo != blank -%}
+            <img
+              src="{{ settings.logo | image_url: width: 150 }}"
+              alt="{{ shop.name }}"
+              class="footer__logo-image"
+              width="150"
+              height="auto"
+              loading="lazy"
+            >
+          {%- else -%}
+            <span class="footer__logo-text">{{ shop.name }}</span>
+          {%- endif -%}
+        </div>
+        <p class="footer__description">
+          {{ section.settings.footer_description | default: 'Discover premium artificial jewellery and authentic Kalamkari textiles. Traditional designs with modern elegance.' }}
+        </p>
+        
+        <!-- Social Links -->
+        {%- if section.settings.show_social -%}
+          <div class="footer__social">
+            <h3 class="footer__social-title">Follow Us</h3>
+            <ul class="footer__social-list">
+              {%- if settings.social_facebook_link != blank -%}
+                <li class="footer__social-item">
+                  <a href="{{ settings.social_facebook_link }}" class="footer__social-link" aria-label="Facebook" target="_blank" rel="noopener">
+                    {% render 'icon', icon: 'facebook' %}
+                  </a>
+                </li>
+              {%- endif -%}
+              {%- if settings.social_instagram_link != blank -%}
+                <li class="footer__social-item">
+                  <a href="{{ settings.social_instagram_link }}" class="footer__social-link" aria-label="Instagram" target="_blank" rel="noopener">
+                    {% render 'icon', icon: 'instagram' %}
+                  </a>
+                </li>
+              {%- endif -%}
+              {%- if settings.social_twitter_link != blank -%}
+                <li class="footer__social-item">
+                  <a href="{{ settings.social_twitter_link }}" class="footer__social-link" aria-label="Twitter" target="_blank" rel="noopener">
+                    {% render 'icon', icon: 'twitter' %}
+                  </a>
+                </li>
+              {%- endif -%}
+              {%- if settings.social_pinterest_link != blank -%}
+                <li class="footer__social-item">
+                  <a href="{{ settings.social_pinterest_link }}" class="footer__social-link" aria-label="Pinterest" target="_blank" rel="noopener">
+                    {% render 'icon', icon: 'pinterest' %}
+                  </a>
+                </li>
+              {%- endif -%}
+              {%- if settings.social_youtube_link != blank -%}
+                <li class="footer__social-item">
+                  <a href="{{ settings.social_youtube_link }}" class="footer__social-link" aria-label="YouTube" target="_blank" rel="noopener">
+                    {% render 'icon', icon: 'youtube' %}
+                  </a>
+                </li>
+              {%- endif -%}
+            </ul>
+          </div>
+        {%- endif -%}
+      </div>
+
+      <!-- Quick Links -->
+      <div class="footer__section">
+        <h3 class="footer__section-title">Quick Links</h3>
+        <ul class="footer__links">
+          {%- for link in linklists[section.settings.footer_menu_1].links -%}
+            <li class="footer__link-item">
+              <a href="{{ link.url }}" class="footer__link">{{ link.title }}</a>
+            </li>
+          {%- endfor -%}
+        </ul>
+      </div>
+
+      <!-- Customer Care -->
+      <div class="footer__section">
+        <h3 class="footer__section-title">Customer Care</h3>
+        <ul class="footer__links">
+          {%- for link in linklists[section.settings.footer_menu_2].links -%}
+            <li class="footer__link-item">
+              <a href="{{ link.url }}" class="footer__link">{{ link.title }}</a>
+            </li>
+          {%- endfor -%}
+        </ul>
+      </div>
+
+      <!-- Newsletter Signup -->
+      <div class="footer__section footer__newsletter">
+        <h3 class="footer__section-title">Stay Connected</h3>
+        <p class="footer__newsletter-description">
+          {{ section.settings.newsletter_description | default: 'Subscribe to get updates on new arrivals, exclusive offers, and cultural stories.' }}
+        </p>
+        
+        <form class="footer__newsletter-form" action="{{ routes.root_url }}contact#contact_form" method="post" accept-charset="UTF-8">
+          <input type="hidden" name="form_type" value="customer">
+          <input type="hidden" name="utf8" value="✓">
+          <input type="hidden" name="contact[tags]" value="newsletter">
+          
+          <div class="footer__newsletter-input-wrapper">
+            <label for="newsletter-email" class="visually-hidden">Email address</label>
+            <input
+              type="email"
+              id="newsletter-email"
+              name="contact[email]"
+              class="footer__newsletter-input"
+              placeholder="Enter your email address"
+              required
+              aria-describedby="newsletter-error"
+            >
+            <button type="submit" class="footer__newsletter-submit" aria-label="Subscribe to newsletter">
+              {% render 'icon', icon: 'arrow-right' %}
+            </button>
+          </div>
+          
+          <div class="footer__newsletter-consent">
+            <label class="footer__newsletter-consent-label">
+              <input type="checkbox" name="contact[accepts_marketing]" value="1" class="footer__newsletter-consent-checkbox" required>
+              <span class="footer__newsletter-consent-text">
+                I agree to receive marketing emails and understand I can unsubscribe at any time.
+              </span>
+            </label>
+          </div>
+          
+          <div id="newsletter-error" class="footer__newsletter-error" role="alert"></div>
+        </form>
+      </div>
+    </div>
+
+    <!-- Footer Bottom -->
+    <div class="footer__bottom">
+      <div class="footer__bottom-content">
+        <!-- Payment Methods -->
+        {%- if section.settings.show_payment_icons -%}
+          <div class="footer__payment">
+            <span class="footer__payment-title">We Accept</span>
+            <div class="footer__payment-icons">
+              {% render 'icon', icon: 'visa' %}
+              {% render 'icon', icon: 'mastercard' %}
+              {% render 'icon', icon: 'paypal' %}
+              {% render 'icon', icon: 'razorpay' %}
+            </div>
+          </div>
+        {%- endif -%}
+
+        <!-- Copyright -->
+        <div class="footer__copyright">
+          <p>&copy; {{ 'now' | date: '%Y' }} {{ shop.name }}. All rights reserved.</p>
+          {%- if section.settings.show_powered_by -%}
+            <p class="footer__powered-by">Powered by <a href="https://www.shopify.com" target="_blank" rel="noopener">Shopify</a></p>
+          {%- endif -%}
+        </div>
+
+        <!-- Legal Links -->
+        <div class="footer__legal">
+          <ul class="footer__legal-list">
+            {%- for link in linklists[section.settings.footer_legal_menu].links -%}
+              <li class="footer__legal-item">
+                <a href="{{ link.url }}" class="footer__legal-link">{{ link.title }}</a>
+              </li>
+            {%- endfor -%}
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+</footer>
+
+<!-- Organization Structured Data -->
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "Organization",
+  "name": "{{ shop.name }}",
+  "url": "{{ shop.url }}",
+  "logo": {
+    "@type": "ImageObject",
+    "url": "{% if settings.logo %}{{ settings.logo | image_url: width: 300 }}{% endif %}"
+  },
+  "description": "{{ shop.description | default: 'Premium artificial jewellery and authentic Kalamkari textiles' | escape }}",
+  "address": {
+    "@type": "PostalAddress",
+    "addressCountry": "IN"
+  },
+  "contactPoint": {
+    "@type": "ContactPoint",
+    "contactType": "customer service",
+    "email": "{{ shop.email }}"
+  },
+  "sameAs": [
+    {% if settings.social_facebook_link != blank %}"{{ settings.social_facebook_link }}",{% endif %}
+    {% if settings.social_instagram_link != blank %}"{{ settings.social_instagram_link }}",{% endif %}
+    {% if settings.social_twitter_link != blank %}"{{ settings.social_twitter_link }}",{% endif %}
+    {% if settings.social_pinterest_link != blank %}"{{ settings.social_pinterest_link }}",{% endif %}
+    {% if settings.social_youtube_link != blank %}"{{ settings.social_youtube_link }}"{% endif %}
+  ]
+}
+</script>
+
+<script>
+  // Newsletter form handling
+  document.addEventListener('DOMContentLoaded', function() {
+    const newsletterForm = document.querySelector('.footer__newsletter-form');
+    const errorDiv = document.getElementById('newsletter-error');
+    
+    if (newsletterForm) {
+      newsletterForm.addEventListener('submit', function(e) {
+        e.preventDefault();
+        
+        const formData = new FormData(this);
+        const email = formData.get('contact[email]');
+        const acceptsMarketing = formData.get('contact[accepts_marketing]');
+        
+        // Basic validation
+        if (!email || !acceptsMarketing) {
+          showError('Please fill in all required fields.');
+          return;
+        }
+        
+        // Submit form
+        fetch(this.action, {
+          method: 'POST',
+          body: formData
+        })
+        .then(response => {
+          if (response.ok) {
+            showSuccess('Thank you for subscribing!');
+            this.reset();
+          } else {
+            showError('Something went wrong. Please try again.');
+          }
+        })
+        .catch(error => {
+          showError('Network error. Please try again.');
+        });
+      });
+    }
+    
+    function showError(message) {
+      errorDiv.textContent = message;
+      errorDiv.className = 'footer__newsletter-error footer__newsletter-error--visible';
+      setTimeout(() => {
+        errorDiv.className = 'footer__newsletter-error';
+      }, 5000);
+    }
+    
+    function showSuccess(message) {
+      errorDiv.textContent = message;
+      errorDiv.className = 'footer__newsletter-error footer__newsletter-success footer__newsletter-error--visible';
+      setTimeout(() => {
+        errorDiv.className = 'footer__newsletter-error';
+      }, 5000);
+    }
+  });
+</script>
+
+{% schema %}
+{
+  "name": "Footer",
+  "class": "section-footer",
+  "settings": [
+    {
+      "type": "header",
+      "content": "Brand Section"
+    },
+    {
+      "type": "textarea",
+      "id": "footer_description",
+      "label": "Footer description",
+      "default": "Discover premium artificial jewellery and authentic Kalamkari textiles. Traditional designs with modern elegance."
+    },
+    {
+      "type": "checkbox",
+      "id": "show_social",
+      "label": "Show social media links",
+      "default": true
+    },
+    {
+      "type": "header",
+      "content": "Navigation Menus"
+    },
+    {
+      "type": "link_list",
+      "id": "footer_menu_1",
+      "label": "Quick Links menu",
+      "default": "footer"
+    },
+    {
+      "type": "link_list",
+      "id": "footer_menu_2",
+      "label": "Customer Care menu"
+    },
+    {
+      "type": "link_list",
+      "id": "footer_legal_menu",
+      "label": "Legal menu"
+    },
+    {
+      "type": "header",
+      "content": "Newsletter"
+    },
+    {
+      "type": "textarea",
+      "id": "newsletter_description",
+      "label": "Newsletter description",
+      "default": "Subscribe to get updates on new arrivals, exclusive offers, and cultural stories."
+    },
+    {
+      "type": "header",
+      "content": "Footer Bottom"
+    },
+    {
+      "type": "checkbox",
+      "id": "show_payment_icons",
+      "label": "Show payment icons",
+      "default": true
+    },
+    {
+      "type": "checkbox",
+      "id": "show_powered_by",
+      "label": "Show 'Powered by Shopify'",
+      "default": false
+    }
+  ]
+}
+{% endschema %}

@@ -1,0 +1,111 @@
+{% comment %}
+  Collection Header Section
+  Displays collection title, description, and image
+{% endcomment %}
+
+<div class="collection-header{% if section.settings.show_collection_image and collection.image %} collection-header--with-image{% endif %}">
+  <div class="container">
+    <!-- Breadcrumb Navigation -->
+    <nav class="breadcrumb" aria-label="Breadcrumb">
+      <ol class="breadcrumb__list">
+        <li class="breadcrumb__item">
+          <a href="{{ routes.root_url }}" class="breadcrumb__link">Home</a>
+        </li>
+        <li class="breadcrumb__item">
+          <span class="breadcrumb__current" aria-current="page">{{ collection.title }}</span>
+        </li>
+      </ol>
+    </nav>
+
+    <!-- Collection Hero -->
+    <div class="collection-hero">
+      {% if section.settings.show_collection_image and collection.image %}
+        <div class="collection-hero__image">
+          <img
+            src="{{ collection.image | image_url: width: 1200 }}"
+            srcset="{{ collection.image | image_url: width: 600 }} 600w,
+                    {{ collection.image | image_url: width: 1200 }} 1200w,
+                    {{ collection.image | image_url: width: 1800 }} 1800w"
+            sizes="100vw"
+            alt="{{ collection.image.alt | default: collection.title }}"
+            class="collection-hero__image-element"
+            loading="eager"
+            width="1200"
+            height="400"
+          >
+        </div>
+      {% endif %}
+
+      <div class="collection-hero__content">
+        <h1 class="collection-title">{{ collection.title }}</h1>
+        
+        {% if section.settings.show_collection_description and collection.description != blank %}
+          <div class="collection-description">
+            {{ collection.description }}
+          </div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+
+<style>
+  .collection-header--with-image {
+    position: relative;
+    overflow: hidden;
+  }
+
+  .collection-hero__image {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: -1;
+  }
+
+  .collection-hero__image-element {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  .collection-header--with-image .collection-hero__content {
+    position: relative;
+    z-index: 1;
+    background: rgba(0, 0, 0, 0.4);
+    color: white;
+    padding: var(--spacing-2xl);
+    text-align: center;
+  }
+
+  .collection-header--with-image .collection-title {
+    color: white;
+  }
+
+  .collection-header--with-image .collection-description {
+    color: rgba(255, 255, 255, 0.9);
+  }
+</style>
+
+{% schema %}
+{
+  "name": "Collection Header",
+  "tag": "section",
+  "class": "section",
+  "settings": [
+    {
+      "type": "checkbox",
+      "id": "show_collection_description",
+      "default": true,
+      "label": "Show collection description"
+    },
+    {
+      "type": "checkbox",
+      "id": "show_collection_image",
+      "default": false,
+      "label": "Show collection image"
+    }
+  ]
+}
+{% endschema %}

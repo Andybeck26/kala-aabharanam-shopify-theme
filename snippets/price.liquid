@@ -1,0 +1,54 @@
+{% comment %}
+  Price Component
+  Displays product pricing with sale indicators
+  Parameters:
+  - product: Product object
+  - variant: Variant object (optional)
+{% endcomment %}
+
+{% assign target = product %}
+{% if variant %}
+  {% assign target = variant %}
+{% endif %}
+
+{% assign compare_at_price = target.compare_at_price %}
+{% assign price = target.price %}
+{% assign available = target.available | default: true %}
+
+<div class="price{% if compare_at_price > price %} price--on-sale{% endif %}{% unless available %} price--sold-out{% endunless %}">
+  {% if compare_at_price > price %}
+    <span class="price__regular">
+      <span class="visually-hidden">Regular price</span>
+      <s class="price__compare">{{ compare_at_price | money }}</s>
+    </span>
+    <span class="price__sale">
+      <span class="visually-hidden">Sale price</span>
+      <span class="price__current">{{ price | money }}</span>
+    </span>
+    <span class="price__savings">
+      Save {{ compare_at_price | minus: price | money }}
+    </span>
+  {% else %}
+    <span class="price__current">
+      <span class="visually-hidden">{% if available %}Price{% else %}Sold out{% endif %}</span>
+      {{ price | money }}
+    </span>
+  {% endif %}
+
+  {% unless available %}
+    <span class="price__availability">Sold out</span>
+  {% endunless %}
+
+  {% if target.unit_price_measurement %}
+    <div class="price__unit">
+      <span class="visually-hidden">Unit price</span>
+      {{ target.unit_price | money }}
+      <span aria-hidden="true">/</span>
+      <span class="visually-hidden">per&nbsp;</span>
+      {%- if target.unit_price_measurement.reference_value != 1 -%}
+        {{- target.unit_price_measurement.reference_value -}}
+      {%- endif -%}
+      {{ target.unit_price_measurement.reference_unit }}
+    </div>
+  {% endif %}
+</div>

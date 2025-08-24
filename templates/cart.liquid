@@ -1,0 +1,486 @@
+{% comment %}
+  Cart Page Template
+  Displays the full cart experience with detailed item management
+{% endcomment %}
+
+<div class="cart-page" x-data="cartPage()">
+  <div class="container">
+    <!-- Page Header -->
+    <div class="page-header">
+      <h1 class="page-title">{{ 'sections.cart.title' | t }}</h1>
+      {% render 'breadcrumb', current_page: 'Cart' %}
+    </div>
+
+    <!-- Cart Content -->
+    <div class="cart-content">
+      <!-- Loading State -->
+      <div x-show="loading" class="cart-loading">
+        <div class="loading-spinner"></div>
+        <p>{{ 'accessibility.loading' | t }}</p>
+      </div>
+
+      <!-- Error State -->
+      <div x-show="error" class="notification notification--error" x-text="error"></div>
+
+      <!-- Empty Cart -->
+      <div x-show="cart.item_count === 0 && !loading" class="cart-empty">
+        <div class="empty-state">
+          <div class="empty-state__icon">
+            {% render 'icon', icon: 'cart-empty' %}
+          </div>
+          <h2 class="empty-state__title">{{ 'sections.cart.empty' | t }}</h2>
+          <p class="empty-state__message">{{ 'sections.cart.empty_text' | t }}</p>
+          <a href="{{ routes.all_products_collection_url }}" class="btn btn--primary btn--large">
+            {{ 'general.continue_shopping' | t }}
+          </a>
+        </div>
+      </div>
+
+      <!-- Cart Items -->
+      <div x-show="cart.item_count > 0" class="cart-items-section">
+        <div class="cart-layout">
+          <!-- Cart Items -->
+          <div class="cart-items">
+            <div class="cart-items__header">
+              <h2 class="cart-items__title">{{ 'sections.cart.items' | t }} (<span x-text="cart.item_count">{{ cart.item_count }}</span>)</h2>
+            </div>
+
+            <div class="cart-items__list">
+              {% for item in cart.items %}
+                <div class="cart-item" data-key="{{ item.key }}">
+                  <!-- Product Image -->
+                  <div class="cart-item__image">
+                    <a href="{{ item.url }}" class="cart-item__image-link">
+                      {% if item.image %}
+                        <img 
+                          src="{{ item.image | image_url: width: 150 }}"
+                          alt="{{ item.image.alt | default: item.product.title }}"
+                          loading="lazy"
+                          class="cart-item__img"
+                        >
+                      {% else %}
+                        <div class="cart-item__image-placeholder">
+                          {% render 'icon', icon: 'placeholder' %}
+                        </div>
+                      {% endif %}
+                    </a>
+                  </div>
+
+                  <!-- Product Details -->
+                  <div class="cart-item__details">
+                    <h3 class="cart-item__title">
+                      <a href="{{ item.url }}" class="cart-item__title-link">
+                        {{ item.product.title }}
+                      </a>
+                    </h3>
+                    
+                    {% if item.variant.title != 'Default Title' %}
+                      <p class="cart-item__variant">{{ item.variant.title }}</p>
+                    {% endif %}
+
+                    {% if item.properties.size > 0 %}
+                      <div class="cart-item__properties">
+                        {% for property in item.properties %}
+                          {% unless property.last == blank %}
+                            <p class="cart-item__property">
+                              <strong>{{ property.first }}:</strong> {{ property.last }}
+                            </p>
+                          {% endunless %}
+                        {% endfor %}
+                      </div>
+                    {% endif %}
+
+                    <!-- Price -->
+                    <div class="cart-item__price">
+                      {% if item.original_price != item.final_price %}
+                        <span class="cart-item__price-current">{{ item.final_price | money }}</span>
+                        <span class="cart-item__price-original">{{ item.original_price | money }}</span>
+                      {% else %}
+                        <span class="cart-item__price-current">{{ item.final_price | money }}</span>
+                      {% endif %}
+                    </div>
+
+                    <!-- Discounts -->
+                    {% if item.line_level_discount_allocations.size > 0 %}
+                      <div class="cart-item__discounts">
+                        {% for discount_allocation in item.line_level_discount_allocations %}
+                          <p class="cart-item__discount">
+                            {% render 'icon', icon: 'discount' %}
+                            {{ discount_allocation.discount_application.title }} (-{{ discount_allocation.amount | money }})
+                          </p>
+                        {% endfor %}
+                      </div>
+                    {% endif %}
+                  </div>
+
+                  <!-- Quantity Controls -->
+                  <div class="cart-item__quantity">
+                    <label for="quantity-{{ item.key }}" class="cart-item__quantity-label sr-only">
+                      {{ 'sections.cart.quantity' | t }}
+                    </label>
+                    <div class="quantity-selector">
+                      <button 
+                        type="button"
+                        class="quantity-selector__btn quantity-selector__btn--minus"
+                        @click="updateQuantity('{{ item.key }}', {{ item.quantity }} - 1)"
+                        :disabled="loading"
+                        aria-label="{{ 'sections.cart.decrease_quantity' | t }}"
+                      >
+                        {% render 'icon', icon: 'minus' %}
+                      </button>
+                      <input 
+                        type="number"
+                        id="quantity-{{ item.key }}"
+                        class="quantity-selector__input"
+                        value="{{ item.quantity }}"
+                        min="0"
+                        @change="updateQuantity('{{ item.key }}', $event.target.value)"
+                        :disabled="loading"
+                      >
+                      <button 
+                        type="button"
+                        class="quantity-selector__btn quantity-selector__btn--plus"
+                        @click="updateQuantity('{{ item.key }}', {{ item.quantity }} + 1)"
+                        :disabled="loading"
+                        aria-label="{{ 'sections.cart.increase_quantity' | t }}"
+                      >
+                        {% render 'icon', icon: 'plus' %}
+                      </button>
+                    </div>
+                  </div>
+
+                  <!-- Item Total -->
+                  <div class="cart-item__total">
+                    <span class="cart-item__total-price">{{ item.final_line_price | money }}</span>
+                  </div>
+
+                  <!-- Remove Button -->
+                  <div class="cart-item__remove">
+                    <button 
+                      type="button"
+                      class="cart-item__remove-btn"
+                      @click="removeItem('{{ item.key }}')"
+                      :disabled="loading"
+                      aria-label="{{ 'sections.cart.remove' | t }}"
+                    >
+                      {% render 'icon', icon: 'trash' %}
+                    </button>
+                  </div>
+                </div>
+              {% endfor %}
+            </div>
+          </div>
+
+          <!-- Cart Summary -->
+          <div class="cart-summary">
+            <div class="cart-summary__content">
+              <h2 class="cart-summary__title">{{ 'sections.cart.order_summary' | t }}</h2>
+
+              <!-- Subtotal -->
+              <div class="cart-summary__line">
+                <span class="cart-summary__label">{{ 'sections.cart.subtotal' | t }}</span>
+                <span class="cart-summary__value">{{ cart.total_price | money }}</span>
+              </div>
+
+              <!-- Cart-level discounts -->
+              {% if cart.cart_level_discount_applications.size > 0 %}
+                {% for discount_application in cart.cart_level_discount_applications %}
+                  <div class="cart-summary__line cart-summary__line--discount">
+                    <span class="cart-summary__label">
+                      {% render 'icon', icon: 'discount' %}
+                      {{ discount_application.title }}
+                    </span>
+                    <span class="cart-summary__value">-{{ discount_application.total_allocated_amount | money }}</span>
+                  </div>
+                {% endfor %}
+              {% endif %}
+
+              <!-- Shipping Calculator -->
+              <div class="cart-summary__shipping">
+                <div class="shipping-calculator" x-data="shippingCalculator()">
+                  <h3 class="shipping-calculator__title">{{ 'sections.cart.shipping_estimate' | t }}</h3>
+                  
+                  <div class="shipping-calculator__form">
+                    <div class="form-field">
+                      <label for="shipping-country" class="form-field__label">
+                        {{ 'sections.cart.shipping_country' | t }}
+                      </label>
+                      <select 
+                        id="shipping-country"
+                        class="form-field__select"
+                        x-model="country"
+                        @change="updateShipping()"
+                      >
+                        <option value="">{{ 'sections.cart.select_country' | t }}</option>
+                        {% for country in shop.shipping_policy.countries %}
+                          <option value="{{ country.code }}">{{ country.name }}</option>
+                        {% endfor %}
+                      </select>
+                    </div>
+
+                    <div class="form-field" x-show="country">
+                      <label for="shipping-province" class="form-field__label">
+                        {{ 'sections.cart.shipping_province' | t }}
+                      </label>
+                      <select 
+                        id="shipping-province"
+                        class="form-field__select"
+                        x-model="province"
+                        @change="updateShipping()"
+                      >
+                        <option value="">{{ 'sections.cart.select_province' | t }}</option>
+                        <!-- Provinces will be populated by JavaScript -->
+                      </select>
+                    </div>
+
+                    <div class="form-field" x-show="country">
+                      <label for="shipping-zip" class="form-field__label">
+                        {{ 'sections.cart.shipping_zip' | t }}
+                      </label>
+                      <input 
+                        type="text"
+                        id="shipping-zip"
+                        class="form-field__input"
+                        x-model="zip"
+                        @input="updateShipping()"
+                        placeholder="{{ 'sections.cart.zip_placeholder' | t }}"
+                      >
+                    </div>
+                  </div>
+
+                  <div x-show="shippingRates.length > 0" class="shipping-rates">
+                    <h4 class="shipping-rates__title">{{ 'sections.cart.shipping_rates' | t }}</h4>
+                    <template x-for="rate in shippingRates" :key="rate.name">
+                      <div class="shipping-rate">
+                        <span class="shipping-rate__name" x-text="rate.name"></span>
+                        <span class="shipping-rate__price" x-text="formatMoney(rate.price)"></span>
+                      </div>
+                    </template>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Discount Code -->
+              <div class="cart-summary__discount">
+                <div class="discount-code" x-data="discountCode()">
+                  <h3 class="discount-code__title">{{ 'sections.cart.discount_code' | t }}</h3>
+                  
+                  <form @submit.prevent="applyDiscount()" class="discount-code__form">
+                    <div class="discount-code__input-group">
+                      <input 
+                        type="text"
+                        class="discount-code__input"
+                        x-model="code"
+                        placeholder="{{ 'sections.cart.discount_placeholder' | t }}"
+                        :disabled="loading"
+                      >
+                      <button 
+                        type="submit"
+                        class="discount-code__btn"
+                        :disabled="loading || !code.trim()"
+                      >
+                        {{ 'sections.cart.apply_discount' | t }}
+                      </button>
+                    </div>
+                  </form>
+
+                  <div x-show="error" class="discount-code__error" x-text="error"></div>
+                </div>
+              </div>
+
+              <!-- Total -->
+              <div class="cart-summary__total">
+                <div class="cart-summary__line cart-summary__line--total">
+                  <span class="cart-summary__label">{{ 'sections.cart.total' | t }}</span>
+                  <span class="cart-summary__value">{{ cart.total_price | money }}</span>
+                </div>
+                <p class="cart-summary__note">{{ 'sections.cart.taxes_and_shipping_at_checkout' | t }}</p>
+              </div>
+
+              <!-- Checkout Button -->
+              <div class="cart-summary__actions">
+                <a
+                  href="/checkout"
+                  class="btn btn--primary btn--large w-full cart-summary__checkout"
+                  :class="{ 'btn--loading': loading }"
+                  @click="window.KalaAabharanam.Analytics?.trackBeginCheckout(cart)"
+                >
+                  {{ 'sections.cart.checkout' | t }}
+                </a>
+                
+                <a href="{{ routes.all_products_collection_url }}" class="btn btn--secondary w-full">
+                  {{ 'general.continue_shopping' | t }}
+                </a>
+              </div>
+
+              <!-- Trust Badges -->
+              <div class="cart-summary__trust">
+                <div class="trust-badges">
+                  <div class="trust-badge">
+                    {% render 'icon', icon: 'shield' %}
+                    <span>{{ 'sections.cart.secure_checkout' | t }}</span>
+                  </div>
+                  <div class="trust-badge">
+                    {% render 'icon', icon: 'truck' %}
+                    <span>{{ 'sections.cart.free_shipping' | t }}</span>
+                  </div>
+                  <div class="trust-badge">
+                    {% render 'icon', icon: 'return' %}
+                    <span>{{ 'sections.cart.easy_returns' | t }}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Recommended Products -->
+    <div x-show="cart.item_count > 0" class="cart-recommendations">
+      <h2 class="cart-recommendations__title">{{ 'sections.cart.you_may_also_like' | t }}</h2>
+      <div class="cart-recommendations__grid">
+        {% assign recommended_products = collections.all.products | where: 'available' | limit: 4 %}
+        {% for product in recommended_products %}
+          {% render 'product-card', product: product, show_quick_add: true %}
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Hidden form for cart updates -->
+<form action="{{ routes.cart_url }}" method="post" enctype="multipart/form-data" id="cart-form" novalidate>
+  <input type="hidden" name="updates[]" value="">
+</form>
+
+<script>
+document.addEventListener('alpine:init', () => {
+  Alpine.data('cartPage', () => ({
+    loading: false,
+    error: null,
+    cart: {{ cart | json }},
+
+    async updateQuantity(key, quantity) {
+      if (quantity < 0) return;
+      
+      this.loading = true;
+      this.error = null;
+
+      try {
+        const response = await fetch('/cart/change.js', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            id: key,
+            quantity: parseInt(quantity)
+          })
+        });
+
+        if (!response.ok) {
+          throw new Error('Failed to update cart');
+        }
+
+        const updatedCart = await response.json();
+        this.cart = updatedCart;
+        
+        // Update Alpine store
+        Alpine.store('cart').fetchCart();
+        
+        if (quantity === 0) {
+          window.KalaAabharanam.showNotification('Item removed from cart', 'success');
+        } else {
+          window.KalaAabharanam.showNotification('Cart updated', 'success');
+        }
+      } catch (error) {
+        console.error('Error updating cart:', error);
+        this.error = 'Failed to update cart. Please try again.';
+      } finally {
+        this.loading = false;
+      }
+    },
+
+    async removeItem(key) {
+      return this.updateQuantity(key, 0);
+    }
+  }));
+
+  Alpine.data('shippingCalculator', () => ({
+    country: '',
+    province: '',
+    zip: '',
+    shippingRates: [],
+    loading: false,
+
+    async updateShipping() {
+      if (!this.country || !this.zip) {
+        this.shippingRates = [];
+        return;
+      }
+
+      this.loading = true;
+
+      try {
+        const response = await fetch('/cart/shipping_rates.json', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            shipping_address: {
+              country: this.country,
+              province: this.province,
+              zip: this.zip
+            }
+          })
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          this.shippingRates = data.shipping_rates || [];
+        }
+      } catch (error) {
+        console.error('Error fetching shipping rates:', error);
+      } finally {
+        this.loading = false;
+      }
+    },
+
+    formatMoney(cents) {
+      return window.KalaAabharanam.formatMoney(cents);
+    }
+  }));
+
+  Alpine.data('discountCode', () => ({
+    code: '',
+    loading: false,
+    error: null,
+
+    async applyDiscount() {
+      if (!this.code.trim()) return;
+
+      this.loading = true;
+      this.error = null;
+
+      try {
+        const response = await fetch('/discount/' + encodeURIComponent(this.code), {
+          method: 'POST'
+        });
+
+        if (response.ok) {
+          window.location.reload();
+        } else {
+          this.error = 'Invalid discount code';
+        }
+      } catch (error) {
+        console.error('Error applying discount:', error);
+        this.error = 'Failed to apply discount code';
+      } finally {
+        this.loading = false;
+      }
+    }
+  }));
+});
+</script>

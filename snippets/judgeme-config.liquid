@@ -1,0 +1,342 @@
+{% comment %}
+  Judge.me Configuration and Integration
+  This snippet handles the Judge.me app configuration and initialization
+{% endcomment %}
+
+<!-- Judge.me Core JavaScript -->
+<script>
+  window.jdgmSettings = {
+    "shop_domain": "{{ shop.permanent_domain }}",
+    "platform": "shopify",
+    "branding": "show",
+    "widget_version": "3",
+    "auto_install": true,
+    "floating_tab_button_name": "{{ 'products.product.reviews.reviews' | t }}",
+    "floating_tab_title": "{{ 'products.product.reviews.let_customers_speak' | t }}",
+    "lang": "{{ request.locale.iso_code }}",
+    "primary_clr": "#C71585",
+    "secondary_clr": "#FFD700",
+    "text_clr": "#36454F",
+    "tabbed_widget_title": "{{ 'products.product.reviews.customer_reviews' | t }}",
+    "disable_web_reviews": false,
+    "badge_no_review_text": "{{ 'products.product.reviews.no_reviews' | t }}",
+    "badge_n_reviews_text": "{{ 'products.product.reviews.n_reviews' | t }}",
+    "badge_star_color": "#FFD700",
+    "verified_badge_text": "{{ 'products.product.reviews.verified_buyer' | t }}",
+    "widget_title": "{{ 'products.product.reviews.customer_reviews' | t }}",
+    "widget_open_form_text": "{{ 'products.product.reviews.write_review' | t }}",
+    "preview_badge_collection_page": true,
+    "preview_badge_product_page": true,
+    "review_dates": true,
+    "enable_custom_form_location": true
+  };
+
+  // Initialize Judge.me when DOM is ready
+  document.addEventListener('DOMContentLoaded', function() {
+    // Load Judge.me script dynamically
+    if (!document.querySelector('script[src*="judge.me"]')) {
+      const script = document.createElement('script');
+      script.src = 'https://judge.me/reviews/{{ shop.permanent_domain }}/widget.js';
+      script.async = true;
+      script.onload = function() {
+        console.log('Judge.me loaded successfully');
+        
+        // Initialize widgets after script loads
+        if (typeof jdgm !== 'undefined') {
+          jdgm.customizeBadge();
+          
+          // Trigger custom event for other scripts
+          document.dispatchEvent(new CustomEvent('judgeme:loaded'));
+        }
+      };
+      script.onerror = function() {
+        console.error('Failed to load Judge.me script');
+        
+        // Show fallback content
+        document.querySelectorAll('.jdgm-widget').forEach(widget => {
+          widget.style.display = 'none';
+        });
+        
+        document.querySelectorAll('.reviews-fallback, .review-form-fallback').forEach(fallback => {
+          fallback.style.display = 'block';
+        });
+      };
+      
+      document.head.appendChild(script);
+    }
+  });
+
+  // Handle review events
+  document.addEventListener('jdgm.review.submitted', function(event) {
+    // Track review submission in analytics
+    if (typeof gtag !== 'undefined') {
+      gtag('event', 'review_submitted', {
+        'event_category': 'engagement',
+        'event_label': 'product_review',
+        'product_id': event.detail.product_id
+      });
+    }
+    
+    // Show success notification
+    showReviewSuccessMessage();
+  });
+
+  document.addEventListener('jdgm.review.loaded', function(event) {
+    // Update review count in navigation or other elements
+    updateReviewCounts();
+  });
+
+  // Helper functions
+  function showReviewSuccessMessage() {
+    const message = document.createElement('div');
+    message.className = 'review-success-notification';
+    message.innerHTML = `
+      <div class="notification notification--success">
+        <div class="notification__content">
+          <strong>{{ 'products.product.reviews.thank_you' | t }}</strong>
+          <p>{{ 'products.product.reviews.review_submitted_message' | t }}</p>
+        </div>
+        <button class="notification__close" onclick="this.parentElement.remove()">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+    `;
+    
+    document.body.appendChild(message);
+    
+    // Auto-remove after 5 seconds
+    setTimeout(() => {
+      if (message.parentElement) {
+        message.remove();
+      }
+    }, 5000);
+  }
+
+  function updateReviewCounts() {
+    // Update any review count displays in the UI
+    const reviewCounts = document.querySelectorAll('[data-review-count]');
+    reviewCounts.forEach(element => {
+      const productId = element.dataset.productId;
+      if (productId && typeof jdgm !== 'undefined') {
+        // Get review count from Judge.me
+        const reviewData = jdgm.getProductReviewData(productId);
+        if (reviewData && reviewData.count) {
+          element.textContent = reviewData.count;
+          element.style.display = 'inline';
+        }
+      }
+    });
+  }
+</script>
+
+<!-- Judge.me CSS Customizations -->
+<style>
+  /* Judge.me Widget Customizations */
+  .jdgm-widget {
+    font-family: var(--font-body) !important;
+  }
+
+  .jdgm-rev-widg__title {
+    font-family: var(--font-heading) !important;
+    font-size: var(--font-size-lg) !important;
+    color: var(--color-text-primary) !important;
+    margin-bottom: var(--spacing-lg) !important;
+  }
+
+  .jdgm-rev__rating .jdgm-star {
+    color: var(--color-gold) !important;
+  }
+
+  .jdgm-rev__rating .jdgm-star--empty {
+    color: var(--color-border) !important;
+  }
+
+  .jdgm-rev__buyer-badge {
+    background: var(--color-puce) !important;
+    color: white !important;
+    border-radius: var(--border-radius-sm) !important;
+    font-size: var(--font-size-xs) !important;
+    padding: 2px 8px !important;
+  }
+
+  .jdgm-rev__author {
+    color: var(--color-text-primary) !important;
+    font-weight: var(--font-weight-medium) !important;
+  }
+
+  .jdgm-rev__timestamp {
+    color: var(--color-text-secondary) !important;
+    font-size: var(--font-size-sm) !important;
+  }
+
+  .jdgm-rev__body {
+    color: var(--color-text-secondary) !important;
+    line-height: 1.6 !important;
+    margin-top: var(--spacing-sm) !important;
+  }
+
+  .jdgm-rev__title {
+    color: var(--color-text-primary) !important;
+    font-weight: var(--font-weight-medium) !important;
+    margin-bottom: var(--spacing-xs) !important;
+  }
+
+  .jdgm-form {
+    background: var(--color-background-secondary) !important;
+    border-radius: var(--border-radius-md) !important;
+    padding: var(--spacing-lg) !important;
+    border: 1px solid var(--color-border) !important;
+  }
+
+  .jdgm-form__title {
+    font-family: var(--font-heading) !important;
+    font-size: var(--font-size-lg) !important;
+    color: var(--color-text-primary) !important;
+    margin-bottom: var(--spacing-lg) !important;
+  }
+
+  .jdgm-form__input,
+  .jdgm-form__textarea {
+    border: 1px solid var(--color-border) !important;
+    border-radius: var(--border-radius-sm) !important;
+    padding: var(--spacing-sm) var(--spacing-md) !important;
+    font-family: var(--font-body) !important;
+    font-size: var(--font-size-base) !important;
+    background: white !important;
+  }
+
+  .jdgm-form__input:focus,
+  .jdgm-form__textarea:focus {
+    border-color: var(--color-puce) !important;
+    outline: none !important;
+    box-shadow: 0 0 0 2px rgba(199, 21, 133, 0.1) !important;
+  }
+
+  .jdgm-form__submit {
+    background: var(--color-puce) !important;
+    color: white !important;
+    border: none !important;
+    border-radius: var(--border-radius-sm) !important;
+    padding: var(--spacing-md) var(--spacing-lg) !important;
+    font-family: var(--font-body) !important;
+    font-size: var(--font-size-base) !important;
+    font-weight: var(--font-weight-medium) !important;
+    cursor: pointer !important;
+    transition: background-color var(--transition-base) !important;
+  }
+
+  .jdgm-form__submit:hover {
+    background: var(--color-puce-dark) !important;
+  }
+
+  .jdgm-preview-badge {
+    display: flex !important;
+    align-items: center !important;
+    gap: var(--spacing-sm) !important;
+  }
+
+  .jdgm-preview-badge__text {
+    color: var(--color-text-secondary) !important;
+    font-size: var(--font-size-sm) !important;
+  }
+
+  /* Floating tab customizations */
+  .jdgm-floating-tab-btn {
+    background: var(--color-puce) !important;
+    color: white !important;
+    border-radius: var(--border-radius-sm) var(--border-radius-sm) 0 0 !important;
+    font-family: var(--font-body) !important;
+  }
+
+  /* Success notification styles */
+  .review-success-notification {
+    position: fixed;
+    top: var(--spacing-lg);
+    right: var(--spacing-lg);
+    z-index: 9999;
+    max-width: 400px;
+  }
+
+  .notification {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--spacing-md);
+    padding: var(--spacing-md) var(--spacing-lg);
+    border-radius: var(--border-radius-md);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    animation: slideInRight 0.3s ease-out;
+  }
+
+  .notification--success {
+    background: var(--color-success-light);
+    border: 1px solid var(--color-success);
+    color: var(--color-success-dark);
+  }
+
+  .notification__content {
+    flex: 1;
+  }
+
+  .notification__content strong {
+    display: block;
+    margin-bottom: var(--spacing-xs);
+  }
+
+  .notification__content p {
+    margin: 0;
+    font-size: var(--font-size-sm);
+  }
+
+  .notification__close {
+    background: none;
+    border: none;
+    font-size: var(--font-size-lg);
+    cursor: pointer;
+    color: inherit;
+    opacity: 0.7;
+    padding: 0;
+    width: 24px;
+    height: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .notification__close:hover {
+    opacity: 1;
+  }
+
+  @keyframes slideInRight {
+    from {
+      transform: translateX(100%);
+      opacity: 0;
+    }
+    to {
+      transform: translateX(0);
+      opacity: 1;
+    }
+  }
+
+  /* Mobile responsive adjustments */
+  @media (max-width: 767px) {
+    .review-success-notification {
+      top: var(--spacing-md);
+      right: var(--spacing-md);
+      left: var(--spacing-md);
+      max-width: none;
+    }
+
+    .jdgm-form {
+      padding: var(--spacing-md) !important;
+    }
+
+    .jdgm-preview-badge {
+      flex-direction: column !important;
+      align-items: flex-start !important;
+    }
+  }
+</style>
+
+<!-- Preload Judge.me resources for better performance -->
+<link rel="preconnect" href="https://judge.me" crossorigin>
+<link rel="dns-prefetch" href="https://judge.me">

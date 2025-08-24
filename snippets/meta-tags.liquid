@@ -1,0 +1,34 @@
+{% comment %}
+  Meta Tags Snippet
+  Basic meta tags that are referenced in the theme layout
+{% endcomment %}
+
+<!-- Basic Meta Tags -->
+<meta name="description" content="{{ page_description | default: shop.description | strip_html | truncate: 155 | escape }}">
+<meta name="keywords" content="artificial jewellery, kalamkari textiles, traditional jewellery, indian jewellery, handcrafted jewellery, ethnic wear, cultural jewellery">
+<meta name="author" content="{{ shop.name }}">
+
+<!-- Viewport and Mobile -->
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0">
+<meta name="format-detection" content="telephone=no">
+
+<!-- Theme Color -->
+<meta name="theme-color" content="#C71585">
+<meta name="msapplication-TileColor" content="#C71585">
+
+<!-- Apple Touch Icons -->
+<link rel="apple-touch-icon" sizes="180x180" href="{{ 'apple-touch-icon.png' | asset_url }}">
+<link rel="icon" type="image/png" sizes="32x32" href="{{ 'favicon-32x32.png' | asset_url }}">
+<link rel="icon" type="image/png" sizes="16x16" href="{{ 'favicon-16x16.png' | asset_url }}">
+<link rel="manifest" href="{{ 'site.webmanifest' | asset_url }}">
+
+<!-- Microsoft Tiles -->
+<meta name="msapplication-config" content="{{ 'browserconfig.xml' | asset_url }}">
+
+<!-- Security Headers -->
+<meta http-equiv="X-Content-Type-Options" content="nosniff">
+<meta http-equiv="X-Frame-Options" content="SAMEORIGIN">
+<meta http-equiv="X-XSS-Protection" content="1; mode=block">
+
+<!-- Referrer Policy -->
+<meta name="referrer" content="strict-origin-when-cross-origin">

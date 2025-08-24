@@ -1,0 +1,32 @@
+# Shopify CLI theme configuration
+# This file contains the configuration for the Shopify CLI theme commands
+
+[environments.development]
+# Development environment configuration
+# Replace with your actual store URL after setup
+store = "kalaabharanam.myshopify.com"
+theme = "development"
+ignore = [
+  "*.md",
+  "node_modules/**",
+  ".git/**",
+  ".vscode/**",
+  "package*.json",
+  ".eslintrc*",
+  ".prettierrc*"
+]
+
+[environments.production]
+# Production environment configuration  
+# Replace with your actual store URL after setup
+store = "kalaabharanam.myshopify.com"
+theme = "live"
+ignore = [
+  "*.md", 
+  "node_modules/**",
+  ".git/**",
+  ".vscode/**",
+  "package*.json",
+  ".eslintrc*",
+  ".prettierrc*"
+]

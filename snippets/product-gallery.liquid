@@ -1,0 +1,639 @@
+{% comment %}
+  Product Gallery Component
+  Displays product images with thumbnail navigation and zoom functionality
+  Parameters:
+  - product: Product object
+{% endcomment %}
+
+<div 
+  class="product-gallery"
+  x-data="productGallery({{ product.images | json }})"
+>
+  <!-- Main Image Display -->
+  <div class="product-gallery__main">
+    <div class="product-gallery__main-container">
+      {% if product.images.size > 0 %}
+        {% for image in product.images %}
+          <div 
+            class="product-gallery__slide"
+            x-show="currentSlide === {{ forloop.index0 }}"
+            x-transition:enter="transition ease-out duration-300"
+            x-transition:enter-start="opacity-0 transform scale-95"
+            x-transition:enter-end="opacity-100 transform scale-100"
+          >
+            <!-- Desktop: Hover to zoom -->
+            <div 
+              class="product-gallery__zoom-container hidden md:block"
+              @mousemove="handleMouseMove($event)"
+              @mouseleave="showZoom = false"
+              @mouseenter="showZoom = true"
+            >
+              {% render 'responsive-image',
+                image: image,
+                sizes: '(min-width: 768px) 50vw, 100vw',
+                class: 'product-gallery__image',
+                alt: image.alt | default: product.title,
+                loading: forloop.first ? 'eager' : 'lazy',
+                preload: forloop.first
+              %}
+              
+              <!-- Zoom overlay for desktop -->
+              <div 
+                class="product-gallery__zoom-overlay"
+                x-show="showZoom"
+                :style="`background-image: url(${getCurrentImageUrl()}); background-position: ${zoomPosition.x}% ${zoomPosition.y}%`"
+              ></div>
+            </div>
+
+            <!-- Mobile: Tap to zoom -->
+            <div 
+              class="product-gallery__mobile-zoom md:hidden"
+              @click="toggleMobileZoom()"
+            >
+              {% render 'responsive-image',
+                image: image,
+                sizes: '100vw',
+                class: 'product-gallery__image',
+                alt: image.alt | default: product.title,
+                loading: forloop.first ? 'eager' : 'lazy'
+              %}
+            </div>
+          </div>
+        {% endfor %}
+      {% else %}
+        <!-- Placeholder when no images -->
+        <div class="product-gallery__placeholder">
+          {% render 'icon', icon: 'placeholder' %}
+          <span>{{ 'products.product.no_image' | t }}</span>
+        </div>
+      {% endif %}
+    </div>
+
+    <!-- Navigation arrows for main image -->
+    {% if product.images.size > 1 %}
+      <button 
+        class="product-gallery__nav product-gallery__nav--prev"
+        @click="previousSlide()"
+        :disabled="currentSlide === 0"
+        aria-label="{{ 'products.product.gallery.previous' | t }}"
+      >
+        {% render 'icon', icon: 'chevron-left' %}
+      </button>
+      
+      <button 
+        class="product-gallery__nav product-gallery__nav--next"
+        @click="nextSlide()"
+        :disabled="currentSlide === {{ product.images.size | minus: 1 }}"
+        aria-label="{{ 'products.product.gallery.next' | t }}"
+      >
+        {% render 'icon', icon: 'chevron-right' %}
+      </button>
+    {% endif %}
+
+    <!-- Image counter -->
+    {% if product.images.size > 1 %}
+      <div class="product-gallery__counter">
+        <span x-text="currentSlide + 1">1</span> / {{ product.images.size }}
+      </div>
+    {% endif %}
+  </div>
+
+  <!-- Thumbnail Navigation -->
+  {% if product.images.size > 1 %}
+    <div class="product-gallery__thumbnails">
+      <div class="product-gallery__thumbnails-container">
+        {% for image in product.images %}
+          <button 
+            class="product-gallery__thumbnail"
+            :class="{ 'product-gallery__thumbnail--active': currentSlide === {{ forloop.index0 }} }"
+            @click="goToSlide({{ forloop.index0 }})"
+            aria-label="{{ 'products.product.gallery.view_image' | t }} {{ forloop.index }}"
+          >
+            {% render 'responsive-image',
+              image: image,
+              sizes: '100px',
+              class: 'product-gallery__thumbnail-image',
+              alt: image.alt | default: product.title,
+              loading: 'lazy'
+            %}
+          </button>
+        {% endfor %}
+      </div>
+    </div>
+  {% endif %}
+</div>
+
+<!-- Mobile Zoom Modal -->
+<div 
+  class="product-gallery__mobile-modal md:hidden"
+  x-show="mobileZoomOpen"
+  x-transition:enter="transition ease-out duration-300"
+  x-transition:enter-start="opacity-0"
+  x-transition:enter-end="opacity-100"
+  x-transition:leave="transition ease-in duration-200"
+  x-transition:leave-start="opacity-100"
+  x-transition:leave-end="opacity-0"
+  @click="closeMobileZoom()"
+>
+  <div class="product-gallery__mobile-modal-content" @click.stop>
+    <button 
+      class="product-gallery__mobile-close"
+      @click="closeMobileZoom()"
+      aria-label="{{ 'general.accessibility.close' | t }}"
+    >
+      {% render 'icon', icon: 'x' %}
+    </button>
+    
+    <div 
+      class="product-gallery__mobile-zoom-image"
+      x-show="mobileZoomOpen && product.images[currentSlide]"
+    >
+      {% for image in product.images %}
+        <img 
+          x-show="currentSlide === {{ forloop.index0 }}"
+          src="{{ image | image_url: width: 1200 }}"
+          alt="{{ image.alt | default: product.title }}"
+          class="product-gallery__zoomed-image"
+        >
+      {% endfor %}
+    </div>
+  </div>
+</div>
+
+<script>
+  function productGallery(images) {
+    return {
+      currentSlide: 0,
+      showZoom: false,
+      mobileZoomOpen: false,
+      zoomPosition: { x: 50, y: 50 },
+      images: images,
+
+      nextSlide() {
+        if (this.currentSlide < this.images.length - 1) {
+          this.currentSlide++;
+          this.preloadAdjacentImages();
+        }
+      },
+
+      previousSlide() {
+        if (this.currentSlide > 0) {
+          this.currentSlide--;
+          this.preloadAdjacentImages();
+        }
+      },
+
+      goToSlide(index) {
+        this.currentSlide = index;
+        this.preloadAdjacentImages();
+      },
+
+      handleMouseMove(event) {
+        const rect = event.currentTarget.getBoundingClientRect();
+        const x = ((event.clientX - rect.left) / rect.width) * 100;
+        const y = ((event.clientY - rect.top) / rect.height) * 100;
+        
+        this.zoomPosition = { x: Math.max(0, Math.min(100, x)), y: Math.max(0, Math.min(100, y)) };
+      },
+
+      getCurrentImageUrl() {
+        if (this.images && this.images[this.currentSlide]) {
+          // Generate high-resolution URL for zoom
+          const baseUrl = this.images[this.currentSlide].src;
+          return baseUrl.replace(/(_\d+x\d+)?(\.[^.]+)$/, '_1800x1800$2');
+        }
+        return '';
+      },
+
+      preloadAdjacentImages() {
+        // Preload next and previous images for smoother navigation
+        const preloadIndexes = [
+          this.currentSlide - 1,
+          this.currentSlide + 1
+        ].filter(index => index >= 0 && index < this.images.length);
+
+        preloadIndexes.forEach(index => {
+          if (this.images[index] && !this.images[index].preloaded) {
+            const img = new Image();
+            img.src = this.images[index].src.replace(/(_\d+x\d+)?(\.[^.]+)$/, '_900x900$2');
+            this.images[index].preloaded = true;
+          }
+        });
+      },
+
+      toggleMobileZoom() {
+        this.mobileZoomOpen = !this.mobileZoomOpen;
+        if (this.mobileZoomOpen) {
+          document.body.style.overflow = 'hidden';
+        } else {
+          document.body.style.overflow = '';
+        }
+      },
+
+      closeMobileZoom() {
+        this.mobileZoomOpen = false;
+        document.body.style.overflow = '';
+      },
+
+      // Keyboard navigation and initialization
+      init() {
+        // Preload first few images
+        this.preloadAdjacentImages();
+
+        // Keyboard navigation
+        this.$el.addEventListener('keydown', (e) => {
+          if (e.key === 'ArrowLeft') {
+            this.previousSlide();
+          } else if (e.key === 'ArrowRight') {
+            this.nextSlide();
+          } else if (e.key === 'Escape' && this.mobileZoomOpen) {
+            this.closeMobileZoom();
+          }
+        });
+
+        // Touch/swipe support for mobile
+        let startX = 0;
+        let startY = 0;
+        let endX = 0;
+        let endY = 0;
+
+        this.$el.addEventListener('touchstart', (e) => {
+          startX = e.touches[0].clientX;
+          startY = e.touches[0].clientY;
+        });
+
+        this.$el.addEventListener('touchend', (e) => {
+          endX = e.changedTouches[0].clientX;
+          endY = e.changedTouches[0].clientY;
+          
+          const deltaX = endX - startX;
+          const deltaY = endY - startY;
+          
+          // Only trigger swipe if horizontal movement is greater than vertical
+          if (Math.abs(deltaX) > Math.abs(deltaY) && Math.abs(deltaX) > 50) {
+            if (deltaX > 0) {
+              this.previousSlide();
+            } else {
+              this.nextSlide();
+            }
+          }
+        });
+
+        // Intersection Observer for lazy loading thumbnails
+        if ('IntersectionObserver' in window) {
+          const thumbnailObserver = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+              if (entry.isIntersecting) {
+                const img = entry.target.querySelector('img');
+                if (img && img.dataset.src) {
+                  img.src = img.dataset.src;
+                  img.removeAttribute('data-src');
+                  thumbnailObserver.unobserve(entry.target);
+                }
+              }
+            });
+          });
+
+          // Observe thumbnail containers
+          this.$el.querySelectorAll('.product-gallery__thumbnail').forEach(thumb => {
+            thumbnailObserver.observe(thumb);
+          });
+        }
+      }
+    }
+  }
+</script>
+
+<style>
+  .product-gallery {
+    position: relative;
+  }
+
+  .product-gallery__main {
+    position: relative;
+    margin-bottom: var(--spacing-lg);
+    background: var(--color-background-secondary);
+    border-radius: var(--border-radius-md);
+    overflow: hidden;
+  }
+
+  .product-gallery__main-container {
+    position: relative;
+    width: 100%;
+    aspect-ratio: 1;
+  }
+
+  .product-gallery__slide {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+  }
+
+  .product-gallery__zoom-container {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    cursor: zoom-in;
+    overflow: hidden;
+  }
+
+  .product-gallery__mobile-zoom {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    cursor: pointer;
+  }
+
+  .product-gallery__image {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: transform var(--transition-base);
+  }
+
+  .product-gallery__zoom-container:hover .product-gallery__image {
+    transform: scale(1.05);
+  }
+
+  .product-gallery__zoom-overlay {
+    position: absolute;
+    top: 0;
+    right: 0;
+    width: 50%;
+    height: 100%;
+    background-size: 250%;
+    background-repeat: no-repeat;
+    border-left: 1px solid var(--color-border);
+    pointer-events: none;
+    z-index: 10;
+    opacity: 0;
+    transition: opacity var(--transition-base);
+  }
+
+  .product-gallery__zoom-container:hover .product-gallery__zoom-overlay {
+    opacity: 1;
+  }
+
+  .product-gallery__nav {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    background: rgba(255, 255, 255, 0.9);
+    border: none;
+    width: 4rem;
+    height: 4rem;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all var(--transition-base);
+    z-index: 5;
+  }
+
+  .product-gallery__nav:hover:not(:disabled) {
+    background: white;
+    box-shadow: var(--shadow-md);
+  }
+
+  .product-gallery__nav:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  .product-gallery__nav--prev {
+    left: var(--spacing-md);
+  }
+
+  .product-gallery__nav--next {
+    right: var(--spacing-md);
+  }
+
+  .product-gallery__nav svg {
+    width: 2rem;
+    height: 2rem;
+    color: var(--color-text-primary);
+  }
+
+  .product-gallery__counter {
+    position: absolute;
+    bottom: var(--spacing-md);
+    right: var(--spacing-md);
+    background: rgba(0, 0, 0, 0.7);
+    color: white;
+    padding: var(--spacing-xs) var(--spacing-sm);
+    border-radius: var(--border-radius-sm);
+    font-size: var(--font-size-sm);
+    z-index: 5;
+  }
+
+  .product-gallery__placeholder {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    color: var(--color-text-secondary);
+    gap: var(--spacing-md);
+  }
+
+  .product-gallery__placeholder svg {
+    width: 6rem;
+    height: 6rem;
+    opacity: 0.5;
+  }
+
+  .product-gallery__thumbnails {
+    overflow-x: auto;
+    scrollbar-width: thin;
+  }
+
+  .product-gallery__thumbnails::-webkit-scrollbar {
+    height: 4px;
+  }
+
+  .product-gallery__thumbnails::-webkit-scrollbar-track {
+    background: var(--color-background-secondary);
+  }
+
+  .product-gallery__thumbnails::-webkit-scrollbar-thumb {
+    background: var(--color-puce);
+    border-radius: 2px;
+  }
+
+  .product-gallery__thumbnails-container {
+    display: flex;
+    gap: var(--spacing-sm);
+    padding: var(--spacing-xs) 0;
+  }
+
+  .product-gallery__thumbnail {
+    flex-shrink: 0;
+    width: 8rem;
+    height: 8rem;
+    border: 2px solid transparent;
+    border-radius: var(--border-radius-sm);
+    overflow: hidden;
+    cursor: pointer;
+    transition: all var(--transition-base);
+    background: var(--color-background-secondary);
+  }
+
+  .product-gallery__thumbnail:hover {
+    border-color: var(--color-puce);
+  }
+
+  .product-gallery__thumbnail--active {
+    border-color: var(--color-puce);
+    box-shadow: 0 0 0 1px var(--color-puce);
+  }
+
+  .product-gallery__thumbnail-image {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  /* Mobile Zoom Modal */
+  .product-gallery__mobile-modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.9);
+    z-index: 1000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: var(--spacing-lg);
+  }
+
+  .product-gallery__mobile-modal-content {
+    position: relative;
+    max-width: 100%;
+    max-height: 100%;
+  }
+
+  .product-gallery__mobile-close {
+    position: absolute;
+    top: var(--spacing-md);
+    right: var(--spacing-md);
+    background: rgba(255, 255, 255, 0.9);
+    border: none;
+    width: 4rem;
+    height: 4rem;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    z-index: 10;
+  }
+
+  .product-gallery__mobile-close svg {
+    width: 2rem;
+    height: 2rem;
+    color: var(--color-text-primary);
+  }
+
+  .product-gallery__zoomed-image {
+    max-width: 100%;
+    max-height: 100%;
+    object-fit: contain;
+  }
+
+  /* Responsive adjustments */
+  @media (max-width: 767px) {
+    .product-gallery__nav {
+      width: 3rem;
+      height: 3rem;
+    }
+
+    .product-gallery__nav svg {
+      width: 1.5rem;
+      height: 1.5rem;
+    }
+
+    .product-gallery__nav--prev {
+      left: var(--spacing-sm);
+    }
+
+    .product-gallery__nav--next {
+      right: var(--spacing-sm);
+    }
+
+    .product-gallery__thumbnail {
+      width: 6rem;
+      height: 6rem;
+    }
+
+    .product-gallery__counter {
+      bottom: var(--spacing-sm);
+      right: var(--spacing-sm);
+      font-size: var(--font-size-xs);
+    }
+  }
+
+  /* Performance optimizations */
+  .product-gallery__slide {
+    will-change: transform, opacity;
+  }
+
+  .product-gallery__zoom-overlay {
+    will-change: opacity, background-position;
+  }
+
+  .product-gallery__image {
+    will-change: transform;
+  }
+
+  /* Reduced motion support */
+  @media (prefers-reduced-motion: reduce) {
+    .product-gallery__slide,
+    .product-gallery__zoom-overlay,
+    .product-gallery__image,
+    .product-gallery__nav {
+      transition: none;
+    }
+    
+    .product-gallery__zoom-container:hover .product-gallery__image {
+      transform: none;
+    }
+  }
+
+  /* High contrast mode support */
+  @media (prefers-contrast: high) {
+    .product-gallery__nav {
+      background: white;
+      border: 2px solid black;
+    }
+    
+    .product-gallery__thumbnail {
+      border-width: 3px;
+    }
+  }
+
+  /* Focus styles for accessibility */
+  .product-gallery__nav:focus,
+  .product-gallery__thumbnail:focus {
+    outline: 2px solid var(--color-puce);
+    outline-offset: 2px;
+  }
+
+  .product-gallery__mobile-close:focus {
+    outline: 2px solid var(--color-puce);
+    outline-offset: 2px;
+  }
+
+  /* Loading states */
+  .product-gallery__image[loading="lazy"] {
+    background: var(--color-background-secondary);
+  }
+
+  .product-gallery__thumbnail-image[loading="lazy"] {
+    background: var(--color-background-secondary);
+  }
+</style>

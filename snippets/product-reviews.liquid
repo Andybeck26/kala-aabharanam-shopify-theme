@@ -1,0 +1,324 @@
+{% comment %}
+  Product Reviews Integration
+  Integrates with Judge.me or similar review systems
+  Parameters:
+  - product: Product object
+  - show_form: Whether to show review form (default: true)
+  - show_summary: Whether to show review summary (default: true)
+{% endcomment %}
+
+{% assign show_review_form = show_form | default: true %}
+{% assign show_review_summary = show_summary | default: true %}
+
+<div class="product-reviews" id="product-reviews">
+  
+  <!-- Review Summary -->
+  {% if show_review_summary %}
+    <div class="product-reviews__summary">
+      <div class="review-summary" 
+           data-product-id="{{ product.id }}"
+           data-shop-domain="{{ shop.permanent_domain }}">
+        
+        <!-- Judge.me widget will populate this -->
+        <div class="jdgm-widget jdgm-preview-badge" 
+             data-id="{{ product.id }}"
+             data-template="index">
+          {{ product.metafields.judgeme.badge }}
+        </div>
+        
+        <!-- Fallback content if Judge.me is not loaded -->
+        <noscript>
+          <div class="review-summary__fallback">
+            <span class="review-summary__text">
+              {{ 'products.product.reviews.customer_reviews' | t }}
+            </span>
+          </div>
+        </noscript>
+      </div>
+    </div>
+  {% endif %}
+
+  <!-- Reviews List -->
+  <div class="product-reviews__list">
+    <!-- Judge.me reviews widget -->
+    <div class="jdgm-widget jdgm-review-widget" 
+         data-product-title="{{ product.title | escape }}"
+         data-product-id="{{ product.id }}"
+         data-from-shop-domain="{{ shop.permanent_domain }}"
+         data-primary-clr="#C71585"
+         data-neutral-clr="#8A3324"
+         data-border-clr="#D2B48C"
+         data-text-clr="#36454F"
+         data-secondary-clr="#FFD700"
+         data-star-clr="#FFD700">
+      {{ product.metafields.judgeme.widget }}
+    </div>
+
+    <!-- Fallback reviews display -->
+    <div class="reviews-fallback" style="display: none;">
+      <div class="reviews-placeholder">
+        <div class="reviews-placeholder__icon">
+          {% render 'icon', icon: 'star' %}
+        </div>
+        <h3 class="reviews-placeholder__title">
+          {{ 'products.product.reviews.no_reviews_yet' | t }}
+        </h3>
+        <p class="reviews-placeholder__text">
+          {{ 'products.product.reviews.be_first_to_review' | t }}
+        </p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Review Form -->
+  {% if show_review_form %}
+    <div class="product-reviews__form">
+      <!-- Judge.me review form -->
+      <div class="jdgm-widget jdgm-write-review-tab" 
+           data-product-title="{{ product.title | escape }}"
+           data-product-id="{{ product.id }}"
+           data-from-shop-domain="{{ shop.permanent_domain }}">
+        {{ product.metafields.judgeme.form }}
+      </div>
+
+      <!-- Fallback review form -->
+      <div class="review-form-fallback" style="display: none;">
+        <h3 class="review-form__title">
+          {{ 'products.product.reviews.write_review' | t }}
+        </h3>
+        <p class="review-form__subtitle">
+          {{ 'products.product.reviews.login_required' | t }}
+        </p>
+        <a href="{{ routes.account_login_url }}" class="btn btn--primary">
+          {{ 'customer.login_page.title' | t }}
+        </a>
+      </div>
+    </div>
+  {% endif %}
+
+  <!-- Review Guidelines -->
+  <div class="product-reviews__guidelines">
+    <details class="review-guidelines">
+      <summary class="review-guidelines__summary">
+        {{ 'products.product.reviews.guidelines_title' | t }}
+      </summary>
+      <div class="review-guidelines__content">
+        <ul class="review-guidelines__list">
+          <li>{{ 'products.product.reviews.guideline_1' | t }}</li>
+          <li>{{ 'products.product.reviews.guideline_2' | t }}</li>
+          <li>{{ 'products.product.reviews.guideline_3' | t }}</li>
+          <li>{{ 'products.product.reviews.guideline_4' | t }}</li>
+        </ul>
+      </div>
+    </details>
+  </div>
+</div>
+
+<!-- Judge.me JavaScript -->
+<script>
+  // Initialize Judge.me widgets when DOM is ready
+  document.addEventListener('DOMContentLoaded', function() {
+    // Check if Judge.me is loaded
+    if (typeof jdgm !== 'undefined') {
+      // Judge.me is loaded, initialize widgets
+      jdgm.customizeBadge();
+    } else {
+      // Judge.me not loaded, show fallback content
+      console.warn('Judge.me not loaded, showing fallback content');
+      
+      // Hide Judge.me widgets and show fallback
+      document.querySelectorAll('.jdgm-widget').forEach(widget => {
+        widget.style.display = 'none';
+      });
+      
+      document.querySelectorAll('.reviews-fallback, .review-form-fallback').forEach(fallback => {
+        fallback.style.display = 'block';
+      });
+    }
+  });
+
+  // Handle review submission success
+  document.addEventListener('jdgm.review.submitted', function(event) {
+    // Show success message
+    const successMessage = document.createElement('div');
+    successMessage.className = 'review-success-message';
+    successMessage.innerHTML = `
+      <div class="alert alert--success">
+        <strong>{{ 'products.product.reviews.thank_you' | t }}</strong>
+        {{ 'products.product.reviews.review_submitted' | t }}
+      </div>
+    `;
+    
+    const reviewsContainer = document.getElementById('product-reviews');
+    reviewsContainer.insertBefore(successMessage, reviewsContainer.firstChild);
+    
+    // Remove success message after 5 seconds
+    setTimeout(() => {
+      successMessage.remove();
+    }, 5000);
+  });
+</script>
+
+<style>
+  .product-reviews {
+    margin-top: var(--spacing-xl);
+  }
+
+  .product-reviews__summary {
+    margin-bottom: var(--spacing-lg);
+    padding-bottom: var(--spacing-lg);
+    border-bottom: 1px solid var(--color-border);
+  }
+
+  .review-summary {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-md);
+  }
+
+  .review-summary__fallback {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-sm);
+    color: var(--color-text-secondary);
+  }
+
+  .product-reviews__list {
+    margin-bottom: var(--spacing-xl);
+  }
+
+  .reviews-placeholder {
+    text-align: center;
+    padding: var(--spacing-xxl) var(--spacing-lg);
+    background: var(--color-background-secondary);
+    border-radius: var(--border-radius-md);
+  }
+
+  .reviews-placeholder__icon {
+    margin-bottom: var(--spacing-lg);
+    opacity: 0.5;
+  }
+
+  .reviews-placeholder__icon svg {
+    width: 4rem;
+    height: 4rem;
+    color: var(--color-gold);
+  }
+
+  .reviews-placeholder__title {
+    font-size: var(--font-size-lg);
+    margin-bottom: var(--spacing-md);
+    color: var(--color-text-primary);
+  }
+
+  .reviews-placeholder__text {
+    color: var(--color-text-secondary);
+    margin-bottom: 0;
+  }
+
+  .product-reviews__form {
+    margin-bottom: var(--spacing-xl);
+  }
+
+  .review-form-fallback {
+    text-align: center;
+    padding: var(--spacing-xl);
+    background: var(--color-background-secondary);
+    border-radius: var(--border-radius-md);
+  }
+
+  .review-form__title {
+    font-size: var(--font-size-lg);
+    margin-bottom: var(--spacing-md);
+    color: var(--color-text-primary);
+  }
+
+  .review-form__subtitle {
+    color: var(--color-text-secondary);
+    margin-bottom: var(--spacing-lg);
+  }
+
+  .review-guidelines {
+    margin-top: var(--spacing-lg);
+    border: 1px solid var(--color-border);
+    border-radius: var(--border-radius-md);
+  }
+
+  .review-guidelines__summary {
+    padding: var(--spacing-md) var(--spacing-lg);
+    background: var(--color-background-secondary);
+    cursor: pointer;
+    font-weight: var(--font-weight-medium);
+    border-radius: var(--border-radius-md);
+  }
+
+  .review-guidelines__summary:hover {
+    background: var(--color-background-tertiary);
+  }
+
+  .review-guidelines__content {
+    padding: var(--spacing-lg);
+  }
+
+  .review-guidelines__list {
+    margin: 0;
+    padding-left: var(--spacing-lg);
+  }
+
+  .review-guidelines__list li {
+    margin-bottom: var(--spacing-sm);
+    color: var(--color-text-secondary);
+  }
+
+  .review-success-message {
+    margin-bottom: var(--spacing-lg);
+  }
+
+  .alert {
+    padding: var(--spacing-md) var(--spacing-lg);
+    border-radius: var(--border-radius-md);
+    border: 1px solid transparent;
+  }
+
+  .alert--success {
+    background: var(--color-success-light);
+    border-color: var(--color-success);
+    color: var(--color-success-dark);
+  }
+
+  /* Judge.me widget customizations */
+  .jdgm-widget {
+    font-family: var(--font-body);
+  }
+
+  .jdgm-rev-widg__title {
+    font-family: var(--font-heading);
+    color: var(--color-text-primary);
+  }
+
+  .jdgm-rev__rating .jdgm-star {
+    color: var(--color-gold);
+  }
+
+  .jdgm-rev__buyer-badge {
+    background: var(--color-puce);
+    color: white;
+  }
+
+  /* Responsive adjustments */
+  @media (max-width: 767px) {
+    .review-summary {
+      flex-direction: column;
+      align-items: flex-start;
+      gap: var(--spacing-sm);
+    }
+
+    .reviews-placeholder {
+      padding: var(--spacing-xl) var(--spacing-md);
+    }
+
+    .review-form-fallback {
+      padding: var(--spacing-lg);
+    }
+  }
+</style>

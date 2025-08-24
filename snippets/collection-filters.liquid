@@ -1,0 +1,367 @@
+{% comment %}
+  Collection Filters Component
+  Provides filtering options for collections with AJAX functionality
+  Parameters:
+  - collection: Collection object
+  - results: Collection results object
+{% endcomment %}
+
+<div class="collection-filters" x-data="collectionFilters()">
+  <div class="filters-header">
+    <h3 class="filters-title">Filter Products</h3>
+    <button 
+      class="filters-clear"
+      @click="clearAllFilters()"
+      x-show="hasActiveFilters"
+    >
+      Clear All
+    </button>
+  </div>
+
+  <div class="filters-content">
+    <!-- Availability Filter -->
+    <div class="filter-group">
+      <h4 class="filter-group__title">Availability</h4>
+      <div class="filter-group__content">
+        <label class="filter-checkbox">
+          <input 
+            type="checkbox" 
+            name="filter.v.availability" 
+            value="1"
+            @change="updateFilters()"
+            x-model="filters.availability"
+          >
+          <span class="filter-checkbox__checkmark"></span>
+          <span class="filter-checkbox__label">In stock only</span>
+        </label>
+      </div>
+    </div>
+
+    <!-- Price Range Filter -->
+    <div class="filter-group">
+      <h4 class="filter-group__title">Price Range</h4>
+      <div class="filter-group__content">
+        <div class="price-range">
+          <div class="price-range__inputs">
+            <div class="price-input">
+              <label for="price-from" class="price-input__label">From</label>
+              <input 
+                type="number" 
+                id="price-from"
+                name="filter.v.price.gte"
+                :value="filters.priceFrom"
+                @input="filters.priceFrom = $event.target.value"
+                @change="updateFilters()"
+                class="price-input__field"
+                min="0"
+                step="1"
+                placeholder="₹0"
+              >
+            </div>
+            <div class="price-input">
+              <label for="price-to" class="price-input__label">To</label>
+              <input 
+                type="number" 
+                id="price-to"
+                name="filter.v.price.lte"
+                :value="filters.priceTo"
+                @input="filters.priceTo = $event.target.value"
+                @change="updateFilters()"
+                class="price-input__field"
+                min="0"
+                step="1"
+                placeholder="₹10000"
+              >
+            </div>
+          </div>
+          
+          <!-- Price Range Slider -->
+          <div class="price-slider">
+            <input 
+              type="range" 
+              class="price-slider__input price-slider__input--from"
+              :value="filters.priceFrom || 0"
+              @input="filters.priceFrom = $event.target.value; updateFilters()"
+              min="0" 
+              max="10000" 
+              step="100"
+            >
+            <input 
+              type="range" 
+              class="price-slider__input price-slider__input--to"
+              :value="filters.priceTo || 10000"
+              @input="filters.priceTo = $event.target.value; updateFilters()"
+              min="0" 
+              max="10000" 
+              step="100"
+            >
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Product Type Filter -->
+    {% assign product_types = collection.products | map: 'type' | uniq | compact %}
+    {% if product_types.size > 0 %}
+      <div class="filter-group">
+        <h4 class="filter-group__title">Product Type</h4>
+        <div class="filter-group__content">
+          {% for product_type in product_types %}
+            <label class="filter-checkbox">
+              <input 
+                type="checkbox" 
+                name="filter.v.product_type" 
+                value="{{ product_type | handle }}"
+                @change="updateFilters()"
+                x-model="filters.productTypes"
+              >
+              <span class="filter-checkbox__checkmark"></span>
+              <span class="filter-checkbox__label">{{ product_type }}</span>
+            </label>
+          {% endfor %}
+        </div>
+      </div>
+    {% endif %}
+
+    <!-- Vendor Filter -->
+    {% assign vendors = collection.products | map: 'vendor' | uniq | compact %}
+    {% if vendors.size > 1 %}
+      <div class="filter-group">
+        <h4 class="filter-group__title">Brand</h4>
+        <div class="filter-group__content">
+          {% for vendor in vendors %}
+            <label class="filter-checkbox">
+              <input 
+                type="checkbox" 
+                name="filter.v.vendor" 
+                value="{{ vendor | handle }}"
+                @change="updateFilters()"
+                x-model="filters.vendors"
+              >
+              <span class="filter-checkbox__checkmark"></span>
+              <span class="filter-checkbox__label">{{ vendor }}</span>
+            </label>
+          {% endfor %}
+        </div>
+      </div>
+    {% endif %}
+
+    <!-- Color Filter (if products have color variants) -->
+    {% assign all_colors = '' %}
+    {% for product in collection.products %}
+      {% for variant in product.variants %}
+        {% if variant.option1 contains 'Color' or variant.option2 contains 'Color' or variant.option3 contains 'Color' %}
+          {% assign color = variant.option1 %}
+          {% if product.options[0] != 'Color' %}
+            {% assign color = variant.option2 %}
+            {% if product.options[1] != 'Color' %}
+              {% assign color = variant.option3 %}
+            {% endif %}
+          {% endif %}
+          {% unless all_colors contains color %}
+            {% assign all_colors = all_colors | append: color | append: ',' %}
+          {% endunless %}
+        {% endif %}
+      {% endfor %}
+    {% endfor %}
+
+    {% assign colors = all_colors | split: ',' | uniq | compact %}
+    {% if colors.size > 0 %}
+      <div class="filter-group">
+        <h4 class="filter-group__title">Color</h4>
+        <div class="filter-group__content">
+          <div class="color-filters">
+            {% for color in colors %}
+              <label class="color-filter">
+                <input 
+                  type="checkbox" 
+                  name="filter.v.option.color" 
+                  value="{{ color | handle }}"
+                  @change="updateFilters()"
+                  x-model="filters.colors"
+                >
+                <span 
+                  class="color-filter__swatch" 
+                  style="background-color: {{ color | downcase | replace: ' ', '' }}"
+                  title="{{ color }}"
+                ></span>
+                <span class="color-filter__label">{{ color }}</span>
+              </label>
+            {% endfor %}
+          </div>
+        </div>
+      </div>
+    {% endif %}
+
+    <!-- Size Filter (if products have size variants) -->
+    {% assign all_sizes = '' %}
+    {% for product in collection.products %}
+      {% for variant in product.variants %}
+        {% if variant.option1 contains 'Size' or variant.option2 contains 'Size' or variant.option3 contains 'Size' %}
+          {% assign size = variant.option1 %}
+          {% if product.options[0] != 'Size' %}
+            {% assign size = variant.option2 %}
+            {% if product.options[1] != 'Size' %}
+              {% assign size = variant.option3 %}
+            {% endif %}
+          {% endif %}
+          {% unless all_sizes contains size %}
+            {% assign all_sizes = all_sizes | append: size | append: ',' %}
+          {% endunless %}
+        {% endif %}
+      {% endfor %}
+    {% endfor %}
+
+    {% assign sizes = all_sizes | split: ',' | uniq | compact %}
+    {% if sizes.size > 0 %}
+      <div class="filter-group">
+        <h4 class="filter-group__title">Size</h4>
+        <div class="filter-group__content">
+          <div class="size-filters">
+            {% for size in sizes %}
+              <label class="size-filter">
+                <input 
+                  type="checkbox" 
+                  name="filter.v.option.size" 
+                  value="{{ size | handle }}"
+                  @change="updateFilters()"
+                  x-model="filters.sizes"
+                >
+                <span class="size-filter__label">{{ size }}</span>
+              </label>
+            {% endfor %}
+          </div>
+        </div>
+      </div>
+    {% endif %}
+  </div>
+
+  <!-- Loading State -->
+  <div class="filters-loading" x-show="loading">
+    <div class="loading-spinner"></div>
+    <span>Updating results...</span>
+  </div>
+</div>
+
+<script>
+  function collectionFilters() {
+    return {
+      loading: false,
+      filters: {
+        availability: false,
+        priceFrom: '',
+        priceTo: '',
+        productTypes: [],
+        vendors: [],
+        colors: [],
+        sizes: []
+      },
+
+      get hasActiveFilters() {
+        return this.filters.availability || 
+               this.filters.priceFrom || 
+               this.filters.priceTo ||
+               this.filters.productTypes.length > 0 ||
+               this.filters.vendors.length > 0 ||
+               this.filters.colors.length > 0 ||
+               this.filters.sizes.length > 0;
+      },
+
+      init() {
+        // Initialize filters from URL parameters
+        this.loadFiltersFromURL();
+      },
+
+      loadFiltersFromURL() {
+        const urlParams = new URLSearchParams(window.location.search);
+        
+        // Load existing filters from URL
+        this.filters.availability = urlParams.has('filter.v.availability');
+        this.filters.priceFrom = urlParams.get('filter.v.price.gte') || '';
+        this.filters.priceTo = urlParams.get('filter.v.price.lte') || '';
+        
+        // Load array filters
+        this.filters.productTypes = urlParams.getAll('filter.v.product_type');
+        this.filters.vendors = urlParams.getAll('filter.v.vendor');
+        this.filters.colors = urlParams.getAll('filter.v.option.color');
+        this.filters.sizes = urlParams.getAll('filter.v.option.size');
+      },
+
+      updateFilters() {
+        if (this.loading) return;
+        
+        this.loading = true;
+        
+        // Build URL with filters
+        const url = new URL(window.location);
+        const params = new URLSearchParams();
+        
+        // Preserve existing non-filter params
+        for (const [key, value] of url.searchParams) {
+          if (!key.startsWith('filter.')) {
+            params.append(key, value);
+          }
+        }
+        
+        // Add filter params
+        if (this.filters.availability) {
+          params.append('filter.v.availability', '1');
+        }
+        
+        if (this.filters.priceFrom) {
+          params.append('filter.v.price.gte', this.filters.priceFrom);
+        }
+        
+        if (this.filters.priceTo) {
+          params.append('filter.v.price.lte', this.filters.priceTo);
+        }
+        
+        this.filters.productTypes.forEach(type => {
+          params.append('filter.v.product_type', type);
+        });
+        
+        this.filters.vendors.forEach(vendor => {
+          params.append('filter.v.vendor', vendor);
+        });
+        
+        this.filters.colors.forEach(color => {
+          params.append('filter.v.option.color', color);
+        });
+        
+        this.filters.sizes.forEach(size => {
+          params.append('filter.v.option.size', size);
+        });
+        
+        // Update URL and reload
+        url.search = params.toString();
+        window.location.href = url.toString();
+      },
+
+      clearAllFilters() {
+        this.filters = {
+          availability: false,
+          priceFrom: '',
+          priceTo: '',
+          productTypes: [],
+          vendors: [],
+          colors: [],
+          sizes: []
+        };
+        
+        // Redirect to clean URL
+        const url = new URL(window.location);
+        const params = new URLSearchParams();
+        
+        // Preserve non-filter params
+        for (const [key, value] of url.searchParams) {
+          if (!key.startsWith('filter.')) {
+            params.append(key, value);
+          }
+        }
+        
+        url.search = params.toString();
+        window.location.href = url.toString();
+      }
+    }
+  }
+</script>

@@ -1,0 +1,63 @@
+# Dependencies
+node_modules/
+npm-debug.log*
+package-lock.json
+
+# Shopify CLI
+.shopify/
+*.log
+
+# Environment files
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Build outputs
+dist/
+build/
+*.zip
+
+# Backup files
+backups/
+*.backup
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+
+# Testing
+coverage/
+.nyc_output/
+test-results/
+
+# Documentation generated files
+docs/lighthouse-report.html
+docs/accessibility-report/
+docs/deployment-report-*.md
+
+# Monitoring and logs
+logs/
+*.log
+monitoring.json
+
+# Personal configuration
+config/personal-settings.json

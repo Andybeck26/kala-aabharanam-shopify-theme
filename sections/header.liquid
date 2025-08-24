@@ -1,0 +1,467 @@
+{{ 'section-header.css' | asset_url | stylesheet_tag }}
+<script src="{{ 'details-disclosure.js' | asset_url }}" defer="defer"></script>
+<script src="{{ 'details-modal.js' | asset_url }}" defer="defer"></script>
+
+{%- liquid
+  assign country_codes = 'AD,AE,AF,AG,AI,AL,AM,AO,AQ,AR,AS,AT,AU,AW,AX,AZ,BA,BB,BD,BE,BF,BG,BH,BI,BJ,BL,BM,BN,BO,BQ,BR,BS,BT,BV,BW,BY,BZ,CA,CC,CD,CF,CG,CH,CI,CK,CL,CM,CN,CO,CR,CU,CV,CW,CX,CY,CZ,DE,DJ,DK,DM,DO,DZ,EC,EE,EG,EH,ER,ES,ET,FI,FJ,FK,FM,FO,FR,GA,GB,GD,GE,GF,GG,GH,GI,GL,GM,GN,GP,GQ,GR,GS,GT,GU,GW,GY,HK,HM,HN,HR,HT,HU,ID,IE,IL,IM,IN,IO,IQ,IR,IS,IT,JE,JM,JO,JP,KE,KG,KH,KI,KM,KN,KP,KR,KW,KY,KZ,LA,LB,LC,LI,LK,LR,LS,LT,LU,LV,LY,MA,MC,MD,ME,MF,MG,MH,MK,ML,MM,MN,MO,MP,MQ,MR,MS,MT,MU,MV,MW,MX,MY,MZ,NA,NC,NE,NF,NG,NI,NL,NO,NP,NR,NU,NZ,OM,PA,PE,PF,PG,PH,PK,PL,PM,PN,PR,PS,PT,PW,PY,QA,RE,RO,RS,RU,RW,SA,SB,SC,SD,SE,SG,SH,SI,SJ,SK,SL,SM,SN,SO,SR,SS,ST,SV,SX,SY,SZ,TC,TD,TF,TG,TH,TJ,TK,TL,TM,TN,TO,TR,TT,TV,TW,TZ,UA,UG,UM,US,UY,UZ,VA,VC,VE,VG,VI,VN,VU,WF,WS,YE,YT,ZA,ZM,ZW' | split: ','
+-%}
+
+<header class="header" x-data="headerData()" role="banner">
+  <div class="header__container page-width">
+    <!-- Mobile menu toggle -->
+    <button
+      class="header__menu-toggle md:hidden"
+      @click="toggleMobileMenu()"
+      :aria-expanded="mobileMenuOpen"
+      aria-controls="mobile-menu"
+      aria-label="Toggle mobile menu"
+    >
+      <span class="header__menu-icon">
+        {% render 'icon', icon: 'hamburger' %}
+      </span>
+    </button>
+
+    <!-- Logo -->
+    <div class="header__logo">
+      <a href="{{ routes.root_url }}" class="header__logo-link" aria-label="Kala Aabharanam home">
+        {%- if settings.logo != blank -%}
+          <img
+            src="{{ settings.logo | image_url: width: 200 }}"
+            alt="{{ shop.name }}"
+            class="header__logo-image"
+            width="200"
+            height="auto"
+            loading="eager"
+          >
+        {%- else -%}
+          <span class="header__logo-text">{{ shop.name }}</span>
+        {%- endif -%}
+      </a>
+    </div>
+
+    <!-- Desktop Navigation -->
+    <nav class="header__nav hidden md:flex" role="navigation" aria-label="Main navigation">
+      <ul class="header__nav-list">
+        {%- for link in linklists.main-menu.links -%}
+          <li class="header__nav-item">
+            <a 
+              href="{{ link.url }}" 
+              class="header__nav-link{% if link.active %} header__nav-link--active{% endif %}"
+              {% if link.active %}aria-current="page"{% endif %}
+            >
+              {{ link.title }}
+            </a>
+            {%- if link.links != blank -%}
+              <div class="header__dropdown">
+                <ul class="header__dropdown-list">
+                  {%- for child_link in link.links -%}
+                    <li class="header__dropdown-item">
+                      <a 
+                        href="{{ child_link.url }}" 
+                        class="header__dropdown-link{% if child_link.active %} header__dropdown-link--active{% endif %}"
+                        {% if child_link.active %}aria-current="page"{% endif %}
+                      >
+                        {{ child_link.title }}
+                      </a>
+                    </li>
+                  {%- endfor -%}
+                </ul>
+              </div>
+            {%- endif -%}
+          </li>
+        {%- endfor -%}
+      </ul>
+    </nav>
+
+    <!-- Header actions -->
+    <div class="header__actions">
+      <!-- Search -->
+      <button
+        class="header__action-btn header__search-btn"
+        @click="toggleSearch()"
+        :aria-expanded="searchOpen"
+        aria-controls="search-overlay"
+        aria-label="Toggle search"
+      >
+        {% render 'icon', icon: 'search' %}
+        <span class="visually-hidden">Search</span>
+      </button>
+
+      <!-- Account -->
+      <a href="{{ routes.account_url }}" class="header__action-btn header__account-btn" aria-label="Account">
+        {% render 'icon', icon: 'account' %}
+        <span class="visually-hidden">Account</span>
+      </a>
+
+      <!-- Cart -->
+      <button
+        class="header__action-btn header__cart-btn"
+        @click="openCart()"
+        aria-label="Open cart"
+      >
+        {% render 'icon', icon: 'cart' %}
+        <span class="header__cart-count" x-text="cartCount" x-show="cartCount > 0">{{ cart.item_count }}</span>
+        <span class="visually-hidden">Cart (<span x-text="cartCount">{{ cart.item_count }}</span> items)</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- Mobile menu -->
+  <div
+    id="mobile-menu"
+    class="header__mobile-menu md:hidden"
+    :class="{ 'open': mobileMenuOpen }"
+    x-show="mobileMenuOpen"
+    x-cloak
+    @click.self="closeMobileMenu()"
+    x-ref="mobileMenu"
+  >
+    <nav 
+      class="header__mobile-nav" 
+      role="navigation" 
+      aria-label="Mobile navigation"
+      @touchstart="handleTouchStart($event)"
+      @touchmove="handleTouchMove($event)"
+      @touchend="handleTouchEnd($event)"
+    >
+      <!-- Mobile nav header -->
+      <div class="header__mobile-nav-header">
+        <span class="header__mobile-nav-title">Menu</span>
+        <button 
+          class="header__mobile-nav-close"
+          @click="closeMobileMenu()"
+          aria-label="Close mobile menu"
+        >
+          {% render 'icon', icon: 'close' %}
+        </button>
+      </div>
+      
+      <ul class="header__mobile-nav-list">
+        {%- for link in linklists.main-menu.links -%}
+          <li class="header__mobile-nav-item">
+            {%- if link.links != blank -%}
+              <details class="header__mobile-dropdown">
+                <summary class="header__mobile-nav-link header__mobile-nav-link--parent">
+                  {{ link.title }}
+                  {% render 'icon', icon: 'caret' %}
+                </summary>
+                <ul class="header__mobile-dropdown-list">
+                  <li class="header__mobile-dropdown-item">
+                    <a href="{{ link.url }}" class="header__mobile-dropdown-link" @click="closeMobileMenu()">
+                      All {{ link.title }}
+                    </a>
+                  </li>
+                  {%- for child_link in link.links -%}
+                    <li class="header__mobile-dropdown-item">
+                      <a 
+                        href="{{ child_link.url }}" 
+                        class="header__mobile-dropdown-link{% if child_link.active %} header__mobile-dropdown-link--active{% endif %}"
+                        {% if child_link.active %}aria-current="page"{% endif %}
+                        @click="closeMobileMenu()"
+                      >
+                        {{ child_link.title }}
+                      </a>
+                    </li>
+                  {%- endfor -%}
+                </ul>
+              </details>
+            {%- else -%}
+              <a 
+                href="{{ link.url }}" 
+                class="header__mobile-nav-link{% if link.active %} header__mobile-nav-link--active{% endif %}"
+                {% if link.active %}aria-current="page"{% endif %}
+                @click="closeMobileMenu()"
+              >
+                {{ link.title }}
+              </a>
+            {%- endif -%}
+          </li>
+        {%- endfor -%}
+      </ul>
+    </nav>
+  </div>
+
+  <!-- Search overlay -->
+  <div
+    id="search-overlay"
+    class="header__search-overlay"
+    x-show="searchOpen"
+    x-transition:enter="transition ease-out duration-200"
+    x-transition:enter-start="opacity-0"
+    x-transition:enter-end="opacity-100"
+    x-transition:leave="transition ease-in duration-150"
+    x-transition:leave-start="opacity-100"
+    x-transition:leave-end="opacity-0"
+    x-cloak
+  >
+    <div class="header__search-container page-width">
+      <form action="{{ routes.search_url }}" method="get" class="header__search-form" role="search">
+        <div class="header__search-input-wrapper">
+          <input
+            type="search"
+            name="q"
+            value="{{ search.terms | escape }}"
+            placeholder="Search products..."
+            class="header__search-input"
+            aria-label="Search products"
+            autocomplete="off"
+            x-ref="searchInput"
+            @input="handleSearchInput($event)"
+          >
+          <button type="submit" class="header__search-submit" aria-label="Submit search">
+            {% render 'icon', icon: 'search' %}
+          </button>
+          <button 
+            type="button" 
+            class="header__search-close" 
+            @click="closeSearch()"
+            aria-label="Close search"
+          >
+            {% render 'icon', icon: 'close' %}
+          </button>
+        </div>
+        
+        <!-- Search suggestions -->
+        <div class="header__search-suggestions" x-show="searchSuggestions.length > 0" x-cloak>
+          <ul class="header__search-suggestions-list">
+            <template x-for="suggestion in searchSuggestions" :key="suggestion.url">
+              <li class="header__search-suggestion-item">
+                <a :href="suggestion.url" class="header__search-suggestion-link">
+                  <img 
+                    :src="suggestion.image" 
+                    :alt="suggestion.title"
+                    class="header__search-suggestion-image"
+                    width="40"
+                    height="40"
+                    loading="lazy"
+                  >
+                  <div class="header__search-suggestion-content">
+                    <span class="header__search-suggestion-title" x-text="suggestion.title"></span>
+                    <span class="header__search-suggestion-price" x-text="suggestion.price"></span>
+                  </div>
+                </a>
+              </li>
+            </template>
+          </ul>
+        </div>
+      </form>
+    </div>
+  </div>
+</header>
+
+<script>
+  function headerData() {
+    return {
+      mobileMenuOpen: false,
+      searchOpen: false,
+      searchSuggestions: [],
+      cartCount: {{ cart.item_count }},
+      touchStartX: 0,
+      touchStartY: 0,
+      touchCurrentX: 0,
+      touchCurrentY: 0,
+      
+      toggleMobileMenu() {
+        this.mobileMenuOpen = !this.mobileMenuOpen;
+        if (this.mobileMenuOpen) {
+          document.body.classList.add('overflow-hidden');
+        } else {
+          document.body.classList.remove('overflow-hidden');
+        }
+      },
+      
+      closeMobileMenu() {
+        this.mobileMenuOpen = false;
+        document.body.classList.remove('overflow-hidden');
+      },
+      
+      toggleSearch() {
+        this.searchOpen = !this.searchOpen;
+        if (this.searchOpen) {
+          this.$nextTick(() => {
+            this.$refs.searchInput.focus();
+          });
+        }
+      },
+      
+      closeSearch() {
+        this.searchOpen = false;
+        this.searchSuggestions = [];
+      },
+      
+      openCart() {
+        this.$dispatch('cart:open');
+      },
+      
+      // Touch gesture handlers for mobile menu
+      handleTouchStart(event) {
+        this.touchStartX = event.touches[0].clientX;
+        this.touchStartY = event.touches[0].clientY;
+      },
+      
+      handleTouchMove(event) {
+        if (!this.touchStartX || !this.touchStartY) {
+          return;
+        }
+        
+        this.touchCurrentX = event.touches[0].clientX;
+        this.touchCurrentY = event.touches[0].clientY;
+        
+        const diffX = this.touchStartX - this.touchCurrentX;
+        const diffY = this.touchStartY - this.touchCurrentY;
+        
+        // Prevent default scrolling if horizontal swipe is detected
+        if (Math.abs(diffX) > Math.abs(diffY) && Math.abs(diffX) > 10) {
+          event.preventDefault();
+        }
+      },
+      
+      handleTouchEnd(event) {
+        if (!this.touchStartX || !this.touchStartY) {
+          return;
+        }
+        
+        const diffX = this.touchStartX - this.touchCurrentX;
+        const diffY = this.touchStartY - this.touchCurrentY;
+        
+        // Check if it's a horizontal swipe (more horizontal than vertical)
+        if (Math.abs(diffX) > Math.abs(diffY)) {
+          // Swipe left to close menu (diffX > 0)
+          if (diffX > 50) {
+            this.closeMobileMenu();
+          }
+        }
+        
+        // Reset touch coordinates
+        this.touchStartX = 0;
+        this.touchStartY = 0;
+        this.touchCurrentX = 0;
+        this.touchCurrentY = 0;
+      },
+      
+      async handleSearchInput(event) {
+        const query = event.target.value.trim();
+        
+        if (query.length < 2) {
+          this.searchSuggestions = [];
+          return;
+        }
+        
+        try {
+          const response = await fetch(`{{ routes.predictive_search_url }}?q=${encodeURIComponent(query)}&resources[type]=product&resources[limit]=5`);
+          const data = await response.json();
+          
+          this.searchSuggestions = data.resources.results.products.map(product => ({
+            title: product.title,
+            url: product.url,
+            price: product.price,
+            image: product.featured_image?.url || ''
+          }));
+        } catch (error) {
+          console.error('Search suggestions error:', error);
+          this.searchSuggestions = [];
+        }
+      },
+      
+      init() {
+        // Listen for cart updates
+        document.addEventListener('cart:updated', (event) => {
+          this.cartCount = event.detail.item_count || 0;
+        });
+        
+        // Close mobile menu on escape key
+        document.addEventListener('keydown', (event) => {
+          if (event.key === 'Escape') {
+            if (this.mobileMenuOpen) {
+              this.toggleMobileMenu();
+            }
+            if (this.searchOpen) {
+              this.closeSearch();
+            }
+          }
+        });
+        
+        // Close mobile menu when clicking outside
+        document.addEventListener('click', (event) => {
+          if (this.mobileMenuOpen && !event.target.closest('.header__mobile-nav') && !event.target.closest('.header__menu-toggle')) {
+            this.closeMobileMenu();
+          }
+        });
+        
+        // Handle window resize
+        window.addEventListener('resize', () => {
+          if (window.innerWidth >= 768 && this.mobileMenuOpen) {
+            this.closeMobileMenu();
+          }
+        });
+        
+        // Improve touch targets for mobile
+        if ('ontouchstart' in window) {
+          document.body.classList.add('touch-device');
+        }
+      }
+    }
+  }
+</script>
+
+{% schema %}
+{
+  "name": "Header",
+  "class": "section-header",
+  "settings": [
+    {
+      "type": "image_picker",
+      "id": "logo",
+      "label": "Logo image"
+    },
+    {
+      "type": "range",
+      "id": "logo_width",
+      "min": 50,
+      "max": 300,
+      "step": 10,
+      "default": 200,
+      "unit": "px",
+      "label": "Logo width"
+    },
+    {
+      "type": "link_list",
+      "id": "menu",
+      "default": "main-menu",
+      "label": "Menu"
+    },
+    {
+      "type": "checkbox",
+      "id": "show_line_separator",
+      "default": true,
+      "label": "Show line separator"
+    },
+    {
+      "type": "checkbox",
+      "id": "enable_sticky_header",
+      "default": true,
+      "label": "Enable sticky header"
+    },
+    {
+      "type": "header",
+      "content": "Mobile settings"
+    },
+    {
+      "type": "select",
+      "id": "mobile_logo_position",
+      "default": "middle-left",
+      "label": "Mobile logo position",
+      "options": [
+        {
+          "value": "middle-left",
+          "label": "Middle left"
+        },
+        {
+          "value": "middle-center",
+          "label": "Middle center"
+        }
+      ]
+    }
+  ]
+}
+{% endschema %}

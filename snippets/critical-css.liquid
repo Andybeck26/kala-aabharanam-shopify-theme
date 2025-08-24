@@ -1,0 +1,154 @@
+{% comment %}
+  Critical CSS for above-the-fold content
+  Inlined to prevent render-blocking
+{% endcomment %}
+
+<style>
+  /* Critical CSS - Above the fold styles */
+  
+  /* Reset and base styles */
+  *,*::before,*::after{box-sizing:border-box}
+  html{font-size:62.5%;height:100%}
+  body{margin:0;font-family:{{ settings.type_body_font.family }},{{ settings.type_body_font.fallback_families }};font-size:1.6rem;line-height:1.6;color:rgb({{ settings.colors_text.red }},{{ settings.colors_text.green }},{{ settings.colors_text.blue }});background-color:rgb({{ settings.colors_background_1.red }},{{ settings.colors_background_1.green }},{{ settings.colors_background_1.blue }})}
+  
+  /* Skip to content link */
+  .skip-to-content-link{position:absolute;top:-4rem;left:1rem;z-index:9999;padding:1rem 2rem;background:#000;color:#fff;text-decoration:none;border-radius:0.4rem}
+  .skip-to-content-link:focus{top:1rem}
+  
+  /* Header critical styles */
+  .header{position:sticky;top:0;z-index:100;background-color:rgb({{ settings.colors_background_1.red }},{{ settings.colors_background_1.green }},{{ settings.colors_background_1.blue }});border-bottom:1px solid rgba({{ settings.colors_text.red }},{{ settings.colors_text.green }},{{ settings.colors_text.blue }},0.1);box-shadow:0 2px 4px rgba(0,0,0,0.1)}
+  
+  .header__container{display:flex;align-items:center;justify-content:space-between;padding:1.6rem 2rem;min-height:7rem;max-width:120rem;margin:0 auto}
+  
+  .header__logo{flex-shrink:0}
+  .header__logo-link{display:block;text-decoration:none}
+  .header__logo-image{height:4rem;width:auto}
+  .header__logo-text{font-family:{{ settings.type_header_font.family }},{{ settings.type_header_font.fallback_families }};font-size:2.4rem;font-weight:700;color:#C71585;text-decoration:none}
+  
+  .header__nav{display:none;align-items:center;gap:3.2rem}
+  .header__nav-link{display:block;padding:0.8rem 0;font-weight:500;color:rgb({{ settings.colors_text.red }},{{ settings.colors_text.green }},{{ settings.colors_text.blue }});text-decoration:none;transition:color 0.2s ease}
+  .header__nav-link:hover{color:#C71585}
+  
+  .header__actions{display:flex;align-items:center;gap:1.6rem}
+  .header__action-btn{display:flex;align-items:center;justify-content:center;width:4rem;height:4rem;background:none;border:none;color:rgb({{ settings.colors_text.red }},{{ settings.colors_text.green }},{{ settings.colors_text.blue }});cursor:pointer;transition:color 0.2s ease}
+  .header__action-btn:hover{color:#C71585}
+  
+  .header__cart-btn{position:relative}
+  .header__cart-count{position:absolute;top:-0.5rem;right:-0.5rem;display:flex;align-items:center;justify-content:center;min-width:2rem;height:2rem;padding:0 0.4rem;font-size:1.2rem;font-weight:700;color:#fff;background-color:#C71585;border-radius:50%}
+  
+  .header__menu-toggle{display:flex}
+  
+  /* Main content area */
+  #MainContent{min-height:50vh}
+  
+  /* Hero section critical styles */
+  .hero{position:relative;min-height:50vh;display:flex;align-items:center;justify-content:center;text-align:center;background-color:rgb({{ settings.colors_background_2.red }},{{ settings.colors_background_2.green }},{{ settings.colors_background_2.blue }})}
+  
+  .hero__content{max-width:80rem;padding:4rem 2rem}
+  .hero__title{margin:0 0 2rem 0;font-family:{{ settings.type_header_font.family }},{{ settings.type_header_font.fallback_families }};font-size:clamp(3.2rem,5vw,6.4rem);font-weight:700;line-height:1.2;color:#C71585}
+  .hero__subtitle{margin:0 0 3.2rem 0;font-size:clamp(1.8rem,2.5vw,2.4rem);color:rgb({{ settings.colors_text.red }},{{ settings.colors_text.green }},{{ settings.colors_text.blue }});opacity:0.8}
+  
+  /* Button critical styles */
+  .btn{display:inline-flex;align-items:center;justify-content:center;padding:1.6rem 3.2rem;font-size:1.6rem;font-weight:600;text-decoration:none;border:none;border-radius:0.8rem;cursor:pointer;transition:all 0.2s ease;min-height:4.8rem}
+  .btn--primary{background-color:#C71585;color:#fff}
+  .btn--primary:hover{background-color:#A0136B;transform:translateY(-0.2rem)}
+  .btn--secondary{background-color:transparent;color:#C71585;border:2px solid #C71585}
+  .btn--secondary:hover{background-color:#C71585;color:#fff}
+  
+  /* Loading states */
+  .loading{opacity:0.6;pointer-events:none}
+  
+  /* Utility classes */
+  .container{max-width:120rem;margin:0 auto;padding:0 2rem}
+  .visually-hidden{position:absolute!important;width:1px!important;height:1px!important;padding:0!important;margin:-1px!important;overflow:hidden!important;clip:rect(0,0,0,0)!important;white-space:nowrap!important;border:0!important}
+  
+  /* Responsive navigation */
+  @media (min-width: 768px) {
+    .header__nav{display:flex}
+    .header__menu-toggle{display:none}
+  }
+  
+  /* Prevent layout shift for images */
+  img{max-width:100%;height:auto}
+  .aspect-ratio{position:relative;overflow:hidden}
+  .aspect-ratio::before{content:'';display:block;padding-bottom:100%}
+  .aspect-ratio > *{position:absolute;top:0;left:0;width:100%;height:100%;object-fit:cover}
+  
+  /* Product grid critical styles */
+  .product-grid{display:grid;gap:2.4rem;grid-template-columns:repeat(auto-fill,minmax(280px,1fr))}
+  
+  .product-card{background-color:rgb({{ settings.colors_background_1.red }},{{ settings.colors_background_1.green }},{{ settings.colors_background_1.blue }});border-radius:1.2rem;overflow:hidden;transition:transform 0.2s ease,box-shadow 0.2s ease}
+  .product-card:hover{transform:translateY(-0.4rem);box-shadow:0 8px 32px rgba(0,0,0,0.12)}
+  
+  .product-card__image-wrapper{position:relative;overflow:hidden;aspect-ratio:1;background-color:rgb({{ settings.colors_background_2.red }},{{ settings.colors_background_2.green }},{{ settings.colors_background_2.blue }})}
+  .product-card__image{width:100%;height:100%;object-fit:cover;transition:transform 0.3s ease}
+  .product-card:hover .product-card__image{transform:scale(1.05)}
+  
+  .product-card__info{padding:2rem}
+  .product-card__title{margin:0 0 0.8rem 0;font-size:1.6rem;font-weight:500;line-height:1.4;color:rgb({{ settings.colors_text.red }},{{ settings.colors_text.green }},{{ settings.colors_text.blue }})}
+  .product-card__price{font-size:1.8rem;font-weight:700;color:#C71585}
+  
+  /* Announcement bar */
+  .announcement-bar{background-color:#C71585;color:#fff;text-align:center;padding:1rem 2rem;font-size:1.4rem}
+  
+  /* Performance optimizations */
+  .lazy-loading{opacity:0;transition:opacity 0.3s ease}
+  .lazy-loading.loaded{opacity:1}
+  
+  /* Prevent FOUC */
+  .no-js .js-only{display:none!important}
+  .js .no-js-only{display:none!important}
+  
+  /* Critical animations */
+  @keyframes fadeIn{from{opacity:0}to{opacity:1}}
+  @keyframes slideUp{from{opacity:0;transform:translateY(2rem)}to{opacity:1;transform:translateY(0)}}
+  
+  .fade-in{animation:fadeIn 0.6s ease-out}
+  .slide-up{animation:slideUp 0.6s ease-out}
+  
+  /* Focus styles for accessibility */
+  :focus{outline:2px solid #C71585;outline-offset:2px}
+  :focus:not(:focus-visible){outline:none}
+  :focus-visible{outline:2px solid #C71585;outline-offset:2px}
+  
+  /* High contrast mode support */
+  @media (prefers-contrast: high) {
+    .header{border-bottom-width:2px}
+    .btn{border-width:2px}
+  }
+  
+  /* Reduced motion support */
+  @media (prefers-reduced-motion: reduce) {
+    *,*::before,*::after{animation-duration:0.01ms!important;animation-iteration-count:1!important;transition-duration:0.01ms!important}
+  }
+</style>
+
+{% comment %}
+  Preload critical resources to improve LCP
+{% endcomment %}
+{%- if template.name == 'index' -%}
+  {%- for section in sections -%}
+    {%- if section.type == 'hero-banner' and section.settings.image -%}
+      <link rel="preload" as="image" href="{{ section.settings.image | image_url: width: 1200 }}">
+      {%- break -%}
+    {%- endif -%}
+  {%- endfor -%}
+{%- elsif template.name == 'product' and product.featured_image -%}
+  <link rel="preload" as="image" href="{{ product.featured_image | image_url: width: 800 }}">
+{%- elsif template.name == 'collection' and collection.featured_image -%}
+  <link rel="preload" as="image" href="{{ collection.featured_image | image_url: width: 1200 }}">
+{%- endif -%}
+
+{% comment %}
+  DNS prefetch for external resources
+{% endcomment %}
+<link rel="dns-prefetch" href="//fonts.googleapis.com">
+<link rel="dns-prefetch" href="//fonts.gstatic.com">
+<link rel="dns-prefetch" href="//www.google-analytics.com">
+<link rel="dns-prefetch" href="//www.googletagmanager.com">
+{%- if settings.social_facebook_link != blank -%}
+  <link rel="dns-prefetch" href="//www.facebook.com">
+{%- endif -%}
+{%- if settings.social_instagram_link != blank -%}
+  <link rel="dns-prefetch" href="//www.instagram.com">
+{%- endif -%}

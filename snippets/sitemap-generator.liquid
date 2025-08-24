@@ -1,0 +1,144 @@
+{% comment %}
+  XML Sitemap Generator
+  Generates dynamic sitemap content for better SEO indexing
+  This should be used in a sitemap.xml template
+{% endcomment %}
+
+<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
+        xmlns:image="http://www.google.com/schemas/sitemap-image/1.1">
+  
+  <!-- Homepage -->
+  <url>
+    <loc>{{ shop.url }}</loc>
+    <lastmod>{{ 'now' | date: '%Y-%m-%dT%H:%M:%S%z' }}</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>1.0</priority>
+  </url>
+
+  <!-- Collections -->
+  {% for collection in collections %}
+    {% unless collection.handle == 'frontpage' %}
+    <url>
+      <loc>{{ shop.url }}{{ collection.url }}</loc>
+      <lastmod>{{ collection.updated_at | date: '%Y-%m-%dT%H:%M:%S%z' }}</lastmod>
+      <changefreq>weekly</changefreq>
+      <priority>0.8</priority>
+      {% if collection.image %}
+      <image:image>
+        <image:loc>{{ collection.image | image_url: width: 1200 }}</image:loc>
+        <image:title>{{ collection.title | escape }}</image:title>
+        <image:caption>{{ collection.description | strip_html | truncate: 200 | escape }}</image:caption>
+      </image:image>
+      {% endif %}
+    </url>
+    {% endunless %}
+  {% endfor %}
+
+  <!-- Products -->
+  {% for product in collections.all.products limit: 1000 %}
+  <url>
+    <loc>{{ shop.url }}{{ product.url }}</loc>
+    <lastmod>{{ product.updated_at | date: '%Y-%m-%dT%H:%M:%S%z' }}</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.7</priority>
+    {% for image in product.images limit: 5 %}
+    <image:image>
+      <image:loc>{{ image | image_url: width: 1200 }}</image:loc>
+      <image:title>{{ product.title | escape }}</image:title>
+      <image:caption>{{ image.alt | default: product.title | escape }}</image:caption>
+    </image:image>
+    {% endfor %}
+  </url>
+  {% endfor %}
+
+  <!-- Blog -->
+  {% for blog in blogs %}
+  <url>
+    <loc>{{ shop.url }}{{ blog.url }}</loc>
+    <lastmod>{{ blog.updated_at | date: '%Y-%m-%dT%H:%M:%S%z' }}</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  {% endfor %}
+
+  <!-- Articles -->
+  {% for article in blogs.news.articles limit: 500 %}
+  <url>
+    <loc>{{ shop.url }}{{ article.url }}</loc>
+    <lastmod>{{ article.updated_at | date: '%Y-%m-%dT%H:%M:%S%z' }}</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.5</priority>
+    {% if article.image %}
+    <image:image>
+      <image:loc>{{ article.image | image_url: width: 1200 }}</image:loc>
+      <image:title>{{ article.title | escape }}</image:title>
+      <image:caption>{{ article.summary | default: article.content | strip_html | truncate: 200 | escape }}</image:caption>
+    </image:image>
+    {% endif %}
+  </url>
+  {% endfor %}
+
+  <!-- Pages -->
+  {% for page in pages %}
+    {% unless page.handle == 'frontpage' %}
+    <url>
+      <loc>{{ shop.url }}{{ page.url }}</loc>
+      <lastmod>{{ page.updated_at | date: '%Y-%m-%dT%H:%M:%S%z' }}</lastmod>
+      <changefreq>monthly</changefreq>
+      <priority>0.4</priority>
+    </url>
+    {% endunless %}
+  {% endfor %}
+
+  <!-- Static pages -->
+  <url>
+    <loc>{{ shop.url }}/pages/about</loc>
+    <lastmod>{{ 'now' | date: '%Y-%m-%dT%H:%M:%S%z' }}</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.4</priority>
+  </url>
+
+  <url>
+    <loc>{{ shop.url }}/pages/contact</loc>
+    <lastmod>{{ 'now' | date: '%Y-%m-%dT%H:%M:%S%z' }}</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.4</priority>
+  </url>
+
+  <url>
+    <loc>{{ shop.url }}/pages/faq</loc>
+    <lastmod>{{ 'now' | date: '%Y-%m-%dT%H:%M:%S%z' }}</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.4</priority>
+  </url>
+
+  <url>
+    <loc>{{ shop.url }}/policies/privacy-policy</loc>
+    <lastmod>{{ 'now' | date: '%Y-%m-%dT%H:%M:%S%z' }}</lastmod>
+    <changefreq>yearly</changefreq>
+    <priority>0.3</priority>
+  </url>
+
+  <url>
+    <loc>{{ shop.url }}/policies/terms-of-service</loc>
+    <lastmod>{{ 'now' | date: '%Y-%m-%dT%H:%M:%S%z' }}</lastmod>
+    <changefreq>yearly</changefreq>
+    <priority>0.3</priority>
+  </url>
+
+  <url>
+    <loc>{{ shop.url }}/policies/shipping-policy</loc>
+    <lastmod>{{ 'now' | date: '%Y-%m-%dT%H:%M:%S%z' }}</lastmod>
+    <changefreq>yearly</changefreq>
+    <priority>0.3</priority>
+  </url>
+
+  <url>
+    <loc>{{ shop.url }}/policies/refund-policy</loc>
+    <lastmod>{{ 'now' | date: '%Y-%m-%dT%H:%M:%S%z' }}</lastmod>
+    <changefreq>yearly</changefreq>
+    <priority>0.3</priority>
+  </url>
+
+</urlset>

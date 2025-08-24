@@ -1,0 +1,49 @@
+{% comment %}
+  Page Card Component
+  Displays page information in search results
+  Parameters:
+  - page: Page object
+  - show_search_highlight: Show search term highlighting (optional)
+{% endcomment %}
+
+<article class="page-card">
+  <div class="page-card__container">
+    <!-- Page Content -->
+    <div class="page-card__content">
+      <!-- Page Meta -->
+      <div class="page-card__meta">
+        <span class="page-card__type">Page</span>
+      </div>
+
+      <!-- Page Title -->
+      <h3 class="page-card__title">
+        <a href="{{ page.url }}" class="page-card__title-link">
+          {% if show_search_highlight %}
+            {{ page.title | highlight: search.terms }}
+          {% else %}
+            {{ page.title }}
+          {% endif %}
+        </a>
+      </h3>
+
+      <!-- Page Content Preview -->
+      {% if page.content != blank %}
+        <div class="page-card__summary">
+          {% if show_search_highlight %}
+            {{ page.content | strip_html | truncate: 200 | highlight: search.terms }}
+          {% else %}
+            {{ page.content | strip_html | truncate: 200 }}
+          {% endif %}
+        </div>
+      {% endif %}
+
+      <!-- View Page Link -->
+      <div class="page-card__actions">
+        <a href="{{ page.url }}" class="page-card__view-more">
+          View Page
+          {% render 'icon', icon: 'arrow-right' %}
+        </a>
+      </div>
+    </div>
+  </div>
+</article>

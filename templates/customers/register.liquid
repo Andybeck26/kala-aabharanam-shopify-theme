@@ -1,0 +1,361 @@
+{% comment %}
+  Customer Registration Template
+  Provides secure registration functionality with form validation and accessibility features
+{% endcomment %}
+
+<div class="customer-auth" x-data="customerRegister()">
+  <div class="container">
+    <div class="customer-auth__container">
+      <!-- Page Header -->
+      <div class="customer-auth__header">
+        <h1 class="customer-auth__title">Create Account</h1>
+        <p class="customer-auth__subtitle">Join the Kala Aabharanam family and discover exquisite jewellery</p>
+      </div>
+
+      <!-- Registration Form -->
+      <div class="customer-auth__form-container">
+        {% form 'create_customer', class: 'customer-form', novalidate: 'novalidate' %}
+          {% if form.errors %}
+            <div class="form-errors" role="alert" aria-live="polite">
+              <h2 class="form-errors__title">{{ 'customer.register.error' | t }}</h2>
+              <ul class="form-errors__list">
+                {% for error in form.errors %}
+                  <li class="form-errors__item">{{ error | first | capitalize }} {{ error | last }}</li>
+                {% endfor %}
+              </ul>
+            </div>
+          {% endif %}
+
+          <div class="form-row">
+            <div class="form-field">
+              <label for="customer-first-name" class="form-label">
+                {{ 'customer.register.first_name' | t }}
+                <span class="form-required" aria-label="required">*</span>
+              </label>
+              <input
+                type="text"
+                id="customer-first-name"
+                name="customer[first_name]"
+                class="form-input"
+                value="{{ form.first_name }}"
+                required
+                autocomplete="given-name"
+                aria-describedby="first-name-error"
+                x-model="firstName"
+                @blur="validateFirstName()"
+              >
+              <div id="first-name-error" class="form-error" role="alert" x-show="firstNameError" x-text="firstNameError"></div>
+            </div>
+
+            <div class="form-field">
+              <label for="customer-last-name" class="form-label">
+                {{ 'customer.register.last_name' | t }}
+                <span class="form-required" aria-label="required">*</span>
+              </label>
+              <input
+                type="text"
+                id="customer-last-name"
+                name="customer[last_name]"
+                class="form-input"
+                value="{{ form.last_name }}"
+                required
+                autocomplete="family-name"
+                aria-describedby="last-name-error"
+                x-model="lastName"
+                @blur="validateLastName()"
+              >
+              <div id="last-name-error" class="form-error" role="alert" x-show="lastNameError" x-text="lastNameError"></div>
+            </div>
+          </div>
+
+          <div class="form-field">
+            <label for="customer-email" class="form-label">
+              {{ 'customer.register.email' | t }}
+              <span class="form-required" aria-label="required">*</span>
+            </label>
+            <input
+              type="email"
+              id="customer-email"
+              name="customer[email]"
+              class="form-input"
+              value="{{ form.email }}"
+              required
+              autocomplete="email"
+              autocapitalize="off"
+              autocorrect="off"
+              aria-describedby="email-error email-help"
+              x-model="email"
+              @blur="validateEmail()"
+            >
+            <div id="email-help" class="form-help">We'll use this to send you order updates and exclusive offers</div>
+            <div id="email-error" class="form-error" role="alert" x-show="emailError" x-text="emailError"></div>
+          </div>
+
+          <div class="form-field">
+            <label for="customer-password" class="form-label">
+              {{ 'customer.register.password' | t }}
+              <span class="form-required" aria-label="required">*</span>
+            </label>
+            <div class="password-field">
+              <input
+                :type="showPassword ? 'text' : 'password'"
+                id="customer-password"
+                name="customer[password]"
+                class="form-input"
+                required
+                autocomplete="new-password"
+                aria-describedby="password-error password-help"
+                x-model="password"
+                @input="validatePassword()"
+              >
+              <button
+                type="button"
+                class="password-toggle"
+                @click="showPassword = !showPassword"
+                :aria-label="showPassword ? 'Hide password' : 'Show password'"
+              >
+                {% render 'icon', icon: 'eye' %}
+              </button>
+            </div>
+            
+            <!-- Password Strength Indicator -->
+            <div class="password-strength" x-show="password">
+              <div class="password-strength__bar">
+                <div 
+                  class="password-strength__fill"
+                  :class="`password-strength__fill--${passwordStrength.level}`"
+                  :style="`width: ${passwordStrength.percentage}%`"
+                ></div>
+              </div>
+              <div class="password-strength__text" x-text="passwordStrength.text"></div>
+            </div>
+
+            <div id="password-help" class="form-help">
+              Password must be at least 8 characters and include uppercase, lowercase, and numbers
+            </div>
+            <div id="password-error" class="form-error" role="alert" x-show="passwordError" x-text="passwordError"></div>
+          </div>
+
+          <!-- Marketing Consent -->
+          <div class="form-field form-field--checkbox">
+            <label class="checkbox-label">
+              <input
+                type="checkbox"
+                name="customer[accepts_marketing]"
+                class="checkbox-input"
+                {% if form.accepts_marketing %}checked{% endif %}
+                x-model="acceptsMarketing"
+              >
+              <span class="checkbox-checkmark"></span>
+              <span class="checkbox-text">
+                {{ 'customer.register.marketing_consent' | t }}
+              </span>
+            </label>
+          </div>
+
+          <!-- Terms and Privacy -->
+          <div class="form-field form-field--checkbox">
+            <label class="checkbox-label">
+              <input
+                type="checkbox"
+                required
+                class="checkbox-input"
+                x-model="acceptsTerms"
+                @change="validateTerms()"
+              >
+              <span class="checkbox-checkmark"></span>
+              <span class="checkbox-text">
+                I agree to the 
+                <a href="{{ pages.terms-of-service.url | default: '#' }}" target="_blank" class="form-link">
+                  Terms of Service
+                </a>
+                and 
+                <a href="{{ pages.privacy-policy.url | default: '#' }}" target="_blank" class="form-link">
+                  Privacy Policy
+                </a>
+                <span class="form-required" aria-label="required">*</span>
+              </span>
+            </label>
+            <div class="form-error" role="alert" x-show="termsError" x-text="termsError"></div>
+          </div>
+
+          <div class="form-actions">
+            <button
+              type="submit"
+              class="btn btn--primary btn--full-width"
+              :disabled="loading || !isFormValid"
+              x-text="loading ? 'Creating Account...' : 'Create Account'"
+            ></button>
+          </div>
+        {% endform %}
+      </div>
+
+      <!-- Login Link -->
+      <div class="customer-auth__footer">
+        <p class="customer-auth__login-prompt">
+          {{ 'customer.register.have_account' | t }}
+          <a href="{{ routes.account_login_url }}" class="customer-auth__login-link">
+            {{ 'customer.login.title' | t }}
+          </a>
+        </p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  function customerRegister() {
+    return {
+      firstName: '{{ form.first_name | escape }}',
+      lastName: '{{ form.last_name | escape }}',
+      email: '{{ form.email | escape }}',
+      password: '',
+      acceptsMarketing: {{ form.accepts_marketing | json }},
+      acceptsTerms: false,
+      showPassword: false,
+      loading: false,
+      
+      // Error states
+      firstNameError: '',
+      lastNameError: '',
+      emailError: '',
+      passwordError: '',
+      termsError: '',
+
+      get isFormValid() {
+        return this.firstName && 
+               this.lastName && 
+               this.email && 
+               this.password && 
+               this.acceptsTerms &&
+               !this.firstNameError && 
+               !this.lastNameError && 
+               !this.emailError && 
+               !this.passwordError &&
+               !this.termsError;
+      },
+
+      get passwordStrength() {
+        if (!this.password) return { level: 'none', percentage: 0, text: '' };
+        
+        let score = 0;
+        let feedback = [];
+        
+        // Length check
+        if (this.password.length >= 8) score += 25;
+        else feedback.push('at least 8 characters');
+        
+        // Uppercase check
+        if (/[A-Z]/.test(this.password)) score += 25;
+        else feedback.push('uppercase letter');
+        
+        // Lowercase check
+        if (/[a-z]/.test(this.password)) score += 25;
+        else feedback.push('lowercase letter');
+        
+        // Number check
+        if (/\d/.test(this.password)) score += 25;
+        else feedback.push('number');
+        
+        let level, text;
+        if (score < 50) {
+          level = 'weak';
+          text = `Weak - Add ${feedback.join(', ')}`;
+        } else if (score < 75) {
+          level = 'medium';
+          text = `Good - Add ${feedback.join(', ')}`;
+        } else if (score < 100) {
+          level = 'strong';
+          text = `Strong - Add ${feedback.join(', ')}`;
+        } else {
+          level = 'excellent';
+          text = 'Excellent password strength';
+        }
+        
+        return { level, percentage: score, text };
+      },
+
+      validateFirstName() {
+        if (!this.firstName.trim()) {
+          this.firstNameError = 'First name is required';
+        } else if (this.firstName.trim().length < 2) {
+          this.firstNameError = 'First name must be at least 2 characters';
+        } else {
+          this.firstNameError = '';
+        }
+      },
+
+      validateLastName() {
+        if (!this.lastName.trim()) {
+          this.lastNameError = 'Last name is required';
+        } else if (this.lastName.trim().length < 2) {
+          this.lastNameError = 'Last name must be at least 2 characters';
+        } else {
+          this.lastNameError = '';
+        }
+      },
+
+      validateEmail() {
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        
+        if (!this.email) {
+          this.emailError = 'Email is required';
+        } else if (!emailRegex.test(this.email)) {
+          this.emailError = 'Please enter a valid email address';
+        } else {
+          this.emailError = '';
+        }
+      },
+
+      validatePassword() {
+        if (!this.password) {
+          this.passwordError = 'Password is required';
+        } else if (this.password.length < 8) {
+          this.passwordError = 'Password must be at least 8 characters';
+        } else if (!/(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/.test(this.password)) {
+          this.passwordError = 'Password must include uppercase, lowercase, and numbers';
+        } else {
+          this.passwordError = '';
+        }
+      },
+
+      validateTerms() {
+        if (!this.acceptsTerms) {
+          this.termsError = 'You must accept the terms and conditions';
+        } else {
+          this.termsError = '';
+        }
+      },
+
+      init() {
+        // Focus first input on load
+        this.$nextTick(() => {
+          document.getElementById('customer-first-name').focus();
+        });
+
+        // Track analytics
+        if (window.KalaAabharanam?.Analytics) {
+          window.KalaAabharanam.Analytics.trackPageView('Customer Registration', window.location.href);
+        }
+      }
+    }
+  }
+</script>
+
+{% schema %}
+{
+  "name": "Customer Registration",
+  "settings": [
+    {
+      "type": "header",
+      "content": "Registration Page Settings"
+    },
+    {
+      "type": "checkbox",
+      "id": "require_marketing_consent",
+      "label": "Require marketing consent",
+      "default": false
+    }
+  ]
+}
+{% endschema %}

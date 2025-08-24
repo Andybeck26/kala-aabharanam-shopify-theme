@@ -1,0 +1,379 @@
+{% comment %}
+  Customer Account Activation Template
+  Provides account activation functionality for email verification
+{% endcomment %}
+
+<div class="customer-auth customer-auth--activate" x-data="accountActivation()">
+  <div class="container">
+    <div class="customer-auth__container">
+      <!-- Page Header -->
+      <div class="customer-auth__header">
+        <h1 class="customer-auth__title">Activate Your Account</h1>
+        <p class="customer-auth__subtitle">
+          Set up your password to complete your account registration
+        </p>
+      </div>
+
+      <!-- Account Activation Form -->
+      <div class="customer-auth__form-container">
+        {% form 'activate_customer_password', class: 'customer-form', novalidate: 'novalidate' %}
+          {% if form.errors %}
+            <div class="form-errors" role="alert" aria-live="polite">
+              <h2 class="form-errors__title">{{ 'customer.activate_account.error' | t }}</h2>
+              <ul class="form-errors__list">
+                {% for error in form.errors %}
+                  <li class="form-errors__item">{{ error | first | capitalize }} {{ error | last }}</li>
+                {% endfor %}
+              </ul>
+            </div>
+          {% endif %}
+
+          <input type="hidden" name="token" value="{{ activation_token }}">
+
+          <!-- Account Information Display -->
+          <div class="account-info">
+            <div class="account-info__item">
+              <span class="account-info__label">Email:</span>
+              <span class="account-info__value">{{ customer.email }}</span>
+            </div>
+            <div class="account-info__item">
+              <span class="account-info__label">Name:</span>
+              <span class="account-info__value">{{ customer.first_name }} {{ customer.last_name }}</span>
+            </div>
+          </div>
+
+          <div class="form-field">
+            <label for="customer-password" class="form-label">
+              {{ 'customer.activate_account.password' | t }}
+              <span class="form-required" aria-label="required">*</span>
+            </label>
+            <div class="password-field">
+              <input
+                :type="showPassword ? 'text' : 'password'"
+                id="customer-password"
+                name="customer[password]"
+                class="form-input"
+                required
+                autocomplete="new-password"
+                aria-describedby="password-error password-help"
+                x-model="password"
+                @input="validatePassword()"
+              >
+              <button
+                type="button"
+                class="password-toggle"
+                @click="showPassword = !showPassword"
+                :aria-label="showPassword ? 'Hide password' : 'Show password'"
+              >
+                {% render 'icon', icon: 'eye' %}
+              </button>
+            </div>
+            
+            <!-- Password Strength Indicator -->
+            <div class="password-strength" x-show="password">
+              <div class="password-strength__bar">
+                <div 
+                  class="password-strength__fill"
+                  :class="`password-strength__fill--${passwordStrength.level}`"
+                  :style="`width: ${passwordStrength.percentage}%`"
+                ></div>
+              </div>
+              <div class="password-strength__text" x-text="passwordStrength.text"></div>
+            </div>
+
+            <div id="password-help" class="form-help">
+              Create a strong password with at least 8 characters, including uppercase, lowercase, and numbers
+            </div>
+            <div id="password-error" class="form-error" role="alert" x-show="passwordError" x-text="passwordError"></div>
+          </div>
+
+          <div class="form-field">
+            <label for="customer-password-confirmation" class="form-label">
+              {{ 'customer.activate_account.password_confirm' | t }}
+              <span class="form-required" aria-label="required">*</span>
+            </label>
+            <div class="password-field">
+              <input
+                :type="showConfirmPassword ? 'text' : 'password'"
+                id="customer-password-confirmation"
+                name="customer[password_confirmation]"
+                class="form-input"
+                required
+                autocomplete="new-password"
+                aria-describedby="password-confirm-error"
+                x-model="passwordConfirm"
+                @input="validatePasswordConfirm()"
+              >
+              <button
+                type="button"
+                class="password-toggle"
+                @click="showConfirmPassword = !showConfirmPassword"
+                :aria-label="showConfirmPassword ? 'Hide password' : 'Show password'"
+              >
+                {% render 'icon', icon: 'eye' %}
+              </button>
+            </div>
+            <div id="password-confirm-error" class="form-error" role="alert" x-show="passwordConfirmError" x-text="passwordConfirmError"></div>
+          </div>
+
+          <!-- Security Tips -->
+          <div class="security-tips">
+            <h3 class="security-tips__title">Password Requirements</h3>
+            <ul class="security-tips__list">
+              <li class="security-tips__item" :class="{ 'security-tips__item--valid': passwordChecks.length }">
+                <span class="security-tips__icon">
+                  <template x-if="passwordChecks.length">
+                    {% render 'icon', icon: 'check' %}
+                  </template>
+                  <template x-if="!passwordChecks.length">
+                    {% render 'icon', icon: 'close' %}
+                  </template>
+                </span>
+                At least 8 characters long
+              </li>
+              <li class="security-tips__item" :class="{ 'security-tips__item--valid': passwordChecks.uppercase }">
+                <span class="security-tips__icon">
+                  <template x-if="passwordChecks.uppercase">
+                    {% render 'icon', icon: 'check' %}
+                  </template>
+                  <template x-if="!passwordChecks.uppercase">
+                    {% render 'icon', icon: 'close' %}
+                  </template>
+                </span>
+                Contains uppercase letters (A-Z)
+              </li>
+              <li class="security-tips__item" :class="{ 'security-tips__item--valid': passwordChecks.lowercase }">
+                <span class="security-tips__icon">
+                  <template x-if="passwordChecks.lowercase">
+                    {% render 'icon', icon: 'check' %}
+                  </template>
+                  <template x-if="!passwordChecks.lowercase">
+                    {% render 'icon', icon: 'close' %}
+                  </template>
+                </span>
+                Contains lowercase letters (a-z)
+              </li>
+              <li class="security-tips__item" :class="{ 'security-tips__item--valid': passwordChecks.numbers }">
+                <span class="security-tips__icon">
+                  <template x-if="passwordChecks.numbers">
+                    {% render 'icon', icon: 'check' %}
+                  </template>
+                  <template x-if="!passwordChecks.numbers">
+                    {% render 'icon', icon: 'close' %}
+                  </template>
+                </span>
+                Contains numbers (0-9)
+              </li>
+              <li class="security-tips__item" :class="{ 'security-tips__item--valid': passwordChecks.match }">
+                <span class="security-tips__icon">
+                  <template x-if="passwordChecks.match">
+                    {% render 'icon', icon: 'check' %}
+                  </template>
+                  <template x-if="!passwordChecks.match">
+                    {% render 'icon', icon: 'close' %}
+                  </template>
+                </span>
+                Passwords match
+              </li>
+            </ul>
+          </div>
+
+          <!-- Terms Acceptance -->
+          <div class="form-field form-field--checkbox">
+            <label class="checkbox-label">
+              <input
+                type="checkbox"
+                required
+                class="checkbox-input"
+                x-model="acceptsTerms"
+                @change="validateTerms()"
+              >
+              <span class="checkbox-checkmark"></span>
+              <span class="checkbox-text">
+                I agree to the 
+                <a href="{{ pages.terms-of-service.url | default: '#' }}" target="_blank" class="form-link">
+                  Terms of Service
+                </a>
+                and 
+                <a href="{{ pages.privacy-policy.url | default: '#' }}" target="_blank" class="form-link">
+                  Privacy Policy
+                </a>
+                <span class="form-required" aria-label="required">*</span>
+              </span>
+            </label>
+            <div class="form-error" role="alert" x-show="termsError" x-text="termsError"></div>
+          </div>
+
+          <div class="form-actions">
+            <button
+              type="submit"
+              class="btn btn--primary btn--full-width"
+              :disabled="loading || !isFormValid"
+              x-text="loading ? 'Activating Account...' : 'Activate Account'"
+            ></button>
+          </div>
+        {% endform %}
+      </div>
+
+      <!-- Welcome Message -->
+      <div class="welcome-message">
+        <div class="welcome-message__icon">
+          {% render 'icon', icon: 'sparkles' %}
+        </div>
+        <div class="welcome-message__content">
+          <h3 class="welcome-message__title">Welcome to Kala Aabharanam!</h3>
+          <p class="welcome-message__text">
+            You're just one step away from accessing our exclusive collection of 
+            handcrafted jewellery and traditional textiles.
+          </p>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  function accountActivation() {
+    return {
+      password: '',
+      passwordConfirm: '',
+      acceptsTerms: false,
+      showPassword: false,
+      showConfirmPassword: false,
+      loading: false,
+      passwordError: '',
+      passwordConfirmError: '',
+      termsError: '',
+
+      get passwordChecks() {
+        return {
+          length: this.password.length >= 8,
+          uppercase: /[A-Z]/.test(this.password),
+          lowercase: /[a-z]/.test(this.password),
+          numbers: /\d/.test(this.password),
+          match: this.password && this.passwordConfirm && this.password === this.passwordConfirm
+        };
+      },
+
+      get passwordStrength() {
+        if (!this.password) return { level: 'none', percentage: 0, text: '' };
+        
+        let score = 0;
+        let feedback = [];
+        
+        if (this.passwordChecks.length) score += 25;
+        else feedback.push('at least 8 characters');
+        
+        if (this.passwordChecks.uppercase) score += 25;
+        else feedback.push('uppercase letter');
+        
+        if (this.passwordChecks.lowercase) score += 25;
+        else feedback.push('lowercase letter');
+        
+        if (this.passwordChecks.numbers) score += 25;
+        else feedback.push('number');
+        
+        let level, text;
+        if (score < 50) {
+          level = 'weak';
+          text = `Weak - Add ${feedback.join(', ')}`;
+        } else if (score < 75) {
+          level = 'medium';
+          text = `Good - Add ${feedback.join(', ')}`;
+        } else if (score < 100) {
+          level = 'strong';
+          text = `Strong - Add ${feedback.join(', ')}`;
+        } else {
+          level = 'excellent';
+          text = 'Excellent password strength';
+        }
+        
+        return { level, percentage: score, text };
+      },
+
+      get isFormValid() {
+        return this.password && 
+               this.passwordConfirm && 
+               this.acceptsTerms &&
+               !this.passwordError && 
+               !this.passwordConfirmError &&
+               !this.termsError &&
+               this.passwordChecks.length &&
+               this.passwordChecks.uppercase &&
+               this.passwordChecks.lowercase &&
+               this.passwordChecks.numbers &&
+               this.passwordChecks.match;
+      },
+
+      validatePassword() {
+        if (!this.password) {
+          this.passwordError = 'Password is required';
+        } else if (!this.passwordChecks.length) {
+          this.passwordError = 'Password must be at least 8 characters';
+        } else if (!this.passwordChecks.uppercase || !this.passwordChecks.lowercase || !this.passwordChecks.numbers) {
+          this.passwordError = 'Password must include uppercase, lowercase, and numbers';
+        } else {
+          this.passwordError = '';
+        }
+        
+        if (this.passwordConfirm) {
+          this.validatePasswordConfirm();
+        }
+      },
+
+      validatePasswordConfirm() {
+        if (!this.passwordConfirm) {
+          this.passwordConfirmError = 'Please confirm your password';
+        } else if (this.password !== this.passwordConfirm) {
+          this.passwordConfirmError = 'Passwords do not match';
+        } else {
+          this.passwordConfirmError = '';
+        }
+      },
+
+      validateTerms() {
+        if (!this.acceptsTerms) {
+          this.termsError = 'You must accept the terms and conditions';
+        } else {
+          this.termsError = '';
+        }
+      },
+
+      init() {
+        // Focus first input on load
+        this.$nextTick(() => {
+          document.getElementById('customer-password').focus();
+        });
+
+        // Track analytics
+        if (window.KalaAabharanam?.Analytics) {
+          window.KalaAabharanam.Analytics.trackPageView('Account Activation', window.location.href);
+        }
+      }
+    }
+  }
+</script>
+
+{% schema %}
+{
+  "name": "Customer Account Activation",
+  "settings": [
+    {
+      "type": "header",
+      "content": "Account Activation Settings"
+    },
+    {
+      "type": "checkbox",
+      "id": "show_welcome_message",
+      "label": "Show welcome message",
+      "default": true
+    },
+    {
+      "type": "checkbox",
+      "id": "require_terms_acceptance",
+      "label": "Require terms acceptance",
+      "default": true
+    }
+  ]
+}
+{% endschema %}

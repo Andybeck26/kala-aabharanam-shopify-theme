@@ -1,0 +1,578 @@
+{% comment %}
+  Customer Addresses Template
+  Provides comprehensive address management with CRUD operations
+{% endcomment %}
+
+<div class="customer-addresses" x-data="customerAddresses()">
+  <div class="container">
+    <!-- Page Header -->
+    <div class="customer-addresses__header">
+      <div class="customer-addresses__breadcrumb">
+        <nav aria-label="Breadcrumb">
+          <ol class="breadcrumb__list">
+            <li class="breadcrumb__item">
+              <a href="{{ routes.account_url }}" class="breadcrumb__link">
+                {{ 'customer.account.title' | t }}
+              </a>
+            </li>
+            <li class="breadcrumb__item">
+              <span class="breadcrumb__current">{{ 'customer.addresses.title' | t }}</span>
+            </li>
+          </ol>
+        </nav>
+      </div>
+      
+      <div class="customer-addresses__title-section">
+        <h1 class="customer-addresses__title">{{ 'customer.addresses.title' | t }}</h1>
+        <p class="customer-addresses__subtitle">
+          Manage your shipping addresses for faster checkout
+        </p>
+      </div>
+
+      <div class="customer-addresses__actions">
+        <button 
+          class="btn btn--primary"
+          @click="showAddForm = true; resetForm()"
+        >
+          {% render 'icon', icon: 'plus' %}
+          {{ 'customer.addresses.add_new' | t }}
+        </button>
+      </div>
+    </div>
+
+    <!-- Address List -->
+    <div class="customer-addresses__content">
+      {% if customer.addresses.size > 0 %}
+        <div class="address-grid">
+          {% for address in customer.addresses %}
+            <div class="address-card" data-address-id="{{ address.id }}">
+              {% if address == customer.default_address %}
+                <div class="address-card__badge address-card__badge--default">
+                  {% render 'icon', icon: 'star' %}
+                  {{ 'customer.addresses.default' | t }}
+                </div>
+              {% endif %}
+              
+              <div class="address-card__content">
+                <div class="address-card__name">
+                  {{ address.first_name }} {{ address.last_name }}
+                </div>
+                
+                <div class="address-card__company">
+                  {% if address.company != blank %}
+                    {{ address.company }}
+                  {% endif %}
+                </div>
+                
+                <div class="address-card__address">
+                  {{ address.address1 }}
+                  {% if address.address2 != blank %}
+                    <br>{{ address.address2 }}
+                  {% endif %}
+                  <br>{{ address.city }}, {{ address.province }} {{ address.zip }}
+                  <br>{{ address.country }}
+                </div>
+                
+                {% if address.phone != blank %}
+                  <div class="address-card__phone">
+                    {% render 'icon', icon: 'phone' %}
+                    {{ address.phone }}
+                  </div>
+                {% endif %}
+              </div>
+              
+              <div class="address-card__actions">
+                <button 
+                  class="btn btn--secondary btn--small"
+                  @click="editAddress({{ address.id | json }})"
+                >
+                  {% render 'icon', icon: 'edit' %}
+                  {{ 'customer.addresses.edit' | t }}
+                </button>
+                
+                {% unless address == customer.default_address %}
+                  <button 
+                    class="btn btn--secondary btn--small"
+                    @click="setDefaultAddress({{ address.id }})"
+                  >
+                    {% render 'icon', icon: 'star' %}
+                    {{ 'customer.addresses.set_default' | t }}
+                  </button>
+                {% endunless %}
+                
+                {% unless address == customer.default_address %}
+                  <button 
+                    class="btn btn--danger btn--small"
+                    @click="confirmDeleteAddress({{ address.id }})"
+                  >
+                    {% render 'icon', icon: 'trash' %}
+                    {{ 'customer.addresses.delete' | t }}
+                  </button>
+                {% endunless %}
+              </div>
+            </div>
+          {% endfor %}
+        </div>
+      {% else %}
+        <div class="empty-state">
+          <div class="empty-state__icon">
+            {% render 'icon', icon: 'location' %}
+          </div>
+          <h2 class="empty-state__title">{{ 'customer.addresses.no_addresses' | t }}</h2>
+          <p class="empty-state__message">
+            {{ 'customer.addresses.no_addresses_message' | t }}
+          </p>
+          <button 
+            class="btn btn--primary"
+            @click="showAddForm = true; resetForm()"
+          >
+            {{ 'customer.addresses.add_first' | t }}
+          </button>
+        </div>
+      {% endif %}
+    </div>
+
+    <!-- Add/Edit Address Modal -->
+    <div 
+      class="address-modal"
+      x-show="showAddForm || showEditForm"
+      x-transition:enter="transition ease-out duration-300"
+      x-transition:enter-start="opacity-0"
+      x-transition:enter-end="opacity-100"
+      x-transition:leave="transition ease-in duration-200"
+      x-transition:leave-start="opacity-100"
+      x-transition:leave-end="opacity-0"
+      @click.self="closeModal()"
+    >
+      <div class="address-modal__content">
+        <div class="address-modal__header">
+          <h2 class="address-modal__title" x-text="showAddForm ? 'Add New Address' : 'Edit Address'"></h2>
+          <button 
+            class="address-modal__close"
+            @click="closeModal()"
+            aria-label="Close modal"
+          >
+            {% render 'icon', icon: 'close' %}
+          </button>
+        </div>
+
+        <div class="address-modal__body">
+          <!-- Add Address Form -->
+          <div x-show="showAddForm">
+            {% form 'customer_address', customer.new_address, class: 'address-form' %}
+              {% render 'address-form-fields' %}
+              
+              <div class="form-actions">
+                <button type="submit" class="btn btn--primary" :disabled="loading">
+                  <span x-show="!loading">{{ 'customer.addresses.add' | t }}</span>
+                  <span x-show="loading">{{ 'customer.addresses.adding' | t }}</span>
+                </button>
+                <button type="button" class="btn btn--secondary" @click="closeModal()">
+                  {{ 'customer.addresses.cancel' | t }}
+                </button>
+              </div>
+            {% endform %}
+          </div>
+
+          <!-- Edit Address Form -->
+          <div x-show="showEditForm">
+            <form class="address-form" @submit.prevent="updateAddress()">
+              <div class="form-row">
+                <div class="form-field">
+                  <label for="edit-first-name" class="form-label">
+                    {{ 'customer.addresses.first_name' | t }}
+                    <span class="form-required">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    id="edit-first-name"
+                    class="form-input"
+                    x-model="editingAddress.first_name"
+                    required
+                  >
+                </div>
+
+                <div class="form-field">
+                  <label for="edit-last-name" class="form-label">
+                    {{ 'customer.addresses.last_name' | t }}
+                    <span class="form-required">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    id="edit-last-name"
+                    class="form-input"
+                    x-model="editingAddress.last_name"
+                    required
+                  >
+                </div>
+              </div>
+
+              <div class="form-field">
+                <label for="edit-company" class="form-label">
+                  {{ 'customer.addresses.company' | t }}
+                </label>
+                <input
+                  type="text"
+                  id="edit-company"
+                  class="form-input"
+                  x-model="editingAddress.company"
+                >
+              </div>
+
+              <div class="form-field">
+                <label for="edit-address1" class="form-label">
+                  {{ 'customer.addresses.address1' | t }}
+                  <span class="form-required">*</span>
+                </label>
+                <input
+                  type="text"
+                  id="edit-address1"
+                  class="form-input"
+                  x-model="editingAddress.address1"
+                  required
+                >
+              </div>
+
+              <div class="form-field">
+                <label for="edit-address2" class="form-label">
+                  {{ 'customer.addresses.address2' | t }}
+                </label>
+                <input
+                  type="text"
+                  id="edit-address2"
+                  class="form-input"
+                  x-model="editingAddress.address2"
+                >
+              </div>
+
+              <div class="form-row">
+                <div class="form-field">
+                  <label for="edit-city" class="form-label">
+                    {{ 'customer.addresses.city' | t }}
+                    <span class="form-required">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    id="edit-city"
+                    class="form-input"
+                    x-model="editingAddress.city"
+                    required
+                  >
+                </div>
+
+                <div class="form-field">
+                  <label for="edit-province" class="form-label">
+                    {{ 'customer.addresses.province' | t }}
+                    <span class="form-required">*</span>
+                  </label>
+                  <select
+                    id="edit-province"
+                    class="form-select"
+                    x-model="editingAddress.province"
+                    required
+                  >
+                    <option value="">{{ 'customer.addresses.select_province' | t }}</option>
+                    {% for province in all_country_option_tags %}
+                      {{ province }}
+                    {% endfor %}
+                  </select>
+                </div>
+              </div>
+
+              <div class="form-row">
+                <div class="form-field">
+                  <label for="edit-zip" class="form-label">
+                    {{ 'customer.addresses.zip' | t }}
+                    <span class="form-required">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    id="edit-zip"
+                    class="form-input"
+                    x-model="editingAddress.zip"
+                    required
+                  >
+                </div>
+
+                <div class="form-field">
+                  <label for="edit-country" class="form-label">
+                    {{ 'customer.addresses.country' | t }}
+                    <span class="form-required">*</span>
+                  </label>
+                  <select
+                    id="edit-country"
+                    class="form-select"
+                    x-model="editingAddress.country"
+                    required
+                  >
+                    <option value="">{{ 'customer.addresses.select_country' | t }}</option>
+                    {% for country in all_country_option_tags %}
+                      {{ country }}
+                    {% endfor %}
+                  </select>
+                </div>
+              </div>
+
+              <div class="form-field">
+                <label for="edit-phone" class="form-label">
+                  {{ 'customer.addresses.phone' | t }}
+                </label>
+                <input
+                  type="tel"
+                  id="edit-phone"
+                  class="form-input"
+                  x-model="editingAddress.phone"
+                >
+              </div>
+
+              <div class="form-field form-field--checkbox">
+                <label class="checkbox-label">
+                  <input
+                    type="checkbox"
+                    class="checkbox-input"
+                    x-model="editingAddress.default"
+                  >
+                  <span class="checkbox-checkmark"></span>
+                  <span class="checkbox-text">
+                    {{ 'customer.addresses.set_as_default' | t }}
+                  </span>
+                </label>
+              </div>
+
+              <div class="form-actions">
+                <button type="submit" class="btn btn--primary" :disabled="loading">
+                  <span x-show="!loading">{{ 'customer.addresses.update' | t }}</span>
+                  <span x-show="loading">{{ 'customer.addresses.updating' | t }}</span>
+                </button>
+                <button type="button" class="btn btn--secondary" @click="closeModal()">
+                  {{ 'customer.addresses.cancel' | t }}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Delete Confirmation Modal -->
+    <div 
+      class="confirm-modal"
+      x-show="showDeleteConfirm"
+      x-transition
+      @click.self="showDeleteConfirm = false"
+    >
+      <div class="confirm-modal__content">
+        <div class="confirm-modal__header">
+          <h3 class="confirm-modal__title">{{ 'customer.addresses.delete_confirm_title' | t }}</h3>
+        </div>
+        <div class="confirm-modal__body">
+          <p>{{ 'customer.addresses.delete_confirm_message' | t }}</p>
+        </div>
+        <div class="confirm-modal__actions">
+          <button 
+            class="btn btn--danger"
+            @click="deleteAddress()"
+            :disabled="loading"
+          >
+            <span x-show="!loading">{{ 'customer.addresses.delete' | t }}</span>
+            <span x-show="loading">{{ 'customer.addresses.deleting' | t }}</span>
+          </button>
+          <button 
+            class="btn btn--secondary"
+            @click="showDeleteConfirm = false"
+          >
+            {{ 'customer.addresses.cancel' | t }}
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  function customerAddresses() {
+    return {
+      showAddForm: false,
+      showEditForm: false,
+      showDeleteConfirm: false,
+      loading: false,
+      editingAddress: {},
+      deletingAddressId: null,
+
+      resetForm() {
+        this.editingAddress = {
+          first_name: '',
+          last_name: '',
+          company: '',
+          address1: '',
+          address2: '',
+          city: '',
+          province: '',
+          zip: '',
+          country: 'India',
+          phone: '',
+          default: false
+        };
+      },
+
+      editAddress(addressData) {
+        this.editingAddress = { ...addressData };
+        this.showEditForm = true;
+        this.showAddForm = false;
+        
+        // Focus first input
+        this.$nextTick(() => {
+          document.getElementById('edit-first-name').focus();
+        });
+      },
+
+      closeModal() {
+        this.showAddForm = false;
+        this.showEditForm = false;
+        this.resetForm();
+      },
+
+      async updateAddress() {
+        this.loading = true;
+        
+        try {
+          const formData = new FormData();
+          formData.append('_method', 'put');
+          formData.append('address[first_name]', this.editingAddress.first_name);
+          formData.append('address[last_name]', this.editingAddress.last_name);
+          formData.append('address[company]', this.editingAddress.company || '');
+          formData.append('address[address1]', this.editingAddress.address1);
+          formData.append('address[address2]', this.editingAddress.address2 || '');
+          formData.append('address[city]', this.editingAddress.city);
+          formData.append('address[province]', this.editingAddress.province);
+          formData.append('address[zip]', this.editingAddress.zip);
+          formData.append('address[country]', this.editingAddress.country);
+          formData.append('address[phone]', this.editingAddress.phone || '');
+          
+          if (this.editingAddress.default) {
+            formData.append('address[default]', '1');
+          }
+
+          const response = await fetch(`/account/addresses/${this.editingAddress.id}`, {
+            method: 'POST',
+            body: formData
+          });
+
+          if (response.ok) {
+            window.location.reload();
+          } else {
+            throw new Error('Failed to update address');
+          }
+        } catch (error) {
+          console.error('Error updating address:', error);
+          window.KalaAabharanam.showNotification('Failed to update address. Please try again.', 'error');
+        } finally {
+          this.loading = false;
+        }
+      },
+
+      confirmDeleteAddress(addressId) {
+        this.deletingAddressId = addressId;
+        this.showDeleteConfirm = true;
+      },
+
+      async deleteAddress() {
+        if (!this.deletingAddressId) return;
+        
+        this.loading = true;
+        
+        try {
+          const formData = new FormData();
+          formData.append('_method', 'delete');
+
+          const response = await fetch(`/account/addresses/${this.deletingAddressId}`, {
+            method: 'POST',
+            body: formData
+          });
+
+          if (response.ok) {
+            window.location.reload();
+          } else {
+            throw new Error('Failed to delete address');
+          }
+        } catch (error) {
+          console.error('Error deleting address:', error);
+          window.KalaAabharanam.showNotification('Failed to delete address. Please try again.', 'error');
+        } finally {
+          this.loading = false;
+          this.showDeleteConfirm = false;
+          this.deletingAddressId = null;
+        }
+      },
+
+      async setDefaultAddress(addressId) {
+        this.loading = true;
+        
+        try {
+          const formData = new FormData();
+          formData.append('_method', 'put');
+          formData.append('address[default]', '1');
+
+          const response = await fetch(`/account/addresses/${addressId}`, {
+            method: 'POST',
+            body: formData
+          });
+
+          if (response.ok) {
+            window.location.reload();
+          } else {
+            throw new Error('Failed to set default address');
+          }
+        } catch (error) {
+          console.error('Error setting default address:', error);
+          window.KalaAabharanam.showNotification('Failed to set default address. Please try again.', 'error');
+        } finally {
+          this.loading = false;
+        }
+      },
+
+      init() {
+        // Track page view
+        if (window.KalaAabharanam?.Analytics) {
+          window.KalaAabharanam.Analytics.trackPageView('Customer Addresses', window.location.href);
+        }
+
+        // Handle escape key
+        document.addEventListener('keydown', (e) => {
+          if (e.key === 'Escape') {
+            if (this.showAddForm || this.showEditForm) {
+              this.closeModal();
+            }
+            if (this.showDeleteConfirm) {
+              this.showDeleteConfirm = false;
+            }
+          }
+        });
+      }
+    }
+  }
+</script>
+
+{% schema %}
+{
+  "name": "Customer Addresses",
+  "settings": [
+    {
+      "type": "header",
+      "content": "Address Management Settings"
+    },
+    {
+      "type": "checkbox",
+      "id": "enable_address_validation",
+      "label": "Enable address validation",
+      "default": true
+    },
+    {
+      "type": "checkbox",
+      "id": "require_phone_number",
+      "label": "Require phone number",
+      "default": false
+    }
+  ]
+}
+{% endschema %}

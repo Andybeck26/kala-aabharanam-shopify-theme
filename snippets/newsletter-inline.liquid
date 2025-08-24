@@ -1,0 +1,261 @@
+{% comment %}
+  Inline newsletter signup snippet for embedding in other templates
+  Compact version of the newsletter signup form
+{% endcomment %}
+
+<div class="newsletter-inline" x-data="inlineNewsletterManager()">
+  <div class="newsletter-inline__content">
+    <div class="newsletter-inline__text">
+      <h3 class="newsletter-inline__title">
+        {{ title | default: 'Join Our Newsletter' }}
+      </h3>
+      <p class="newsletter-inline__description">
+        {{ description | default: 'Get exclusive offers and updates delivered to your inbox.' }}
+      </p>
+    </div>
+
+    <form class="newsletter-inline__form" 
+          @submit.prevent="submitNewsletter()"
+          x-show="!isSubscribed">
+      
+      <div class="newsletter-inline__input-group">
+        <input type="email" 
+               x-model="email"
+               placeholder="Enter your email"
+               class="newsletter-inline__input"
+               required
+               :disabled="isLoading">
+        
+        <button type="submit" 
+                class="newsletter-inline__submit"
+                :disabled="isLoading || !email"
+                :class="{ 'newsletter-inline__submit--loading': isLoading }">
+          <span x-show="!isLoading">Subscribe</span>
+          <span x-show="isLoading">...</span>
+        </button>
+      </div>
+
+      <div class="newsletter-inline__consent">
+        <label class="newsletter-inline__consent-label">
+          <input type="checkbox" 
+                 x-model="consentGiven"
+                 class="newsletter-inline__consent-checkbox"
+                 required>
+          <span class="newsletter-inline__consent-text">
+            I agree to receive marketing emails. 
+            <a href="/pages/privacy-policy" class="newsletter-inline__consent-link">Privacy Policy</a>
+          </span>
+        </label>
+      </div>
+
+      <div class="newsletter-inline__error" 
+           x-show="errorMessage" 
+           role="alert">
+        <span x-text="errorMessage"></span>
+      </div>
+    </form>
+
+    <div class="newsletter-inline__success" x-show="isSubscribed" x-transition>
+      <div class="newsletter-inline__success-icon">
+        {% render 'icon', icon: 'check-circle' %}
+      </div>
+      <p class="newsletter-inline__success-message">
+        Thanks for subscribing! Check your email for confirmation.
+      </p>
+    </div>
+  </div>
+</div>
+
+<script>
+  function inlineNewsletterManager() {
+    return {
+      email: '',
+      consentGiven: false,
+      isLoading: false,
+      isSubscribed: false,
+      errorMessage: '',
+
+      async submitNewsletter() {
+        if (!this.email || !this.consentGiven) {
+          this.errorMessage = 'Please enter your email and accept our privacy policy.';
+          return;
+        }
+
+        this.isLoading = true;
+        this.errorMessage = '';
+
+        try {
+          const response = await fetch('/contact', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/x-www-form-urlencoded',
+            },
+            body: new URLSearchParams({
+              'form_type': 'customer',
+              'utf8': '✓',
+              'contact[tags]': 'newsletter,inline-signup',
+              'contact[email]': this.email,
+              'contact[accepts_marketing]': 'true'
+            })
+          });
+
+          if (response.ok) {
+            this.isSubscribed = true;
+            this.email = '';
+            this.consentGiven = false;
+            
+            // Track subscription
+            if (typeof gtag !== 'undefined') {
+              gtag('event', 'newsletter_signup', {
+                'event_category': 'engagement',
+                'event_label': 'inline'
+              });
+            }
+          } else {
+            throw new Error('Subscription failed');
+          }
+
+        } catch (error) {
+          this.errorMessage = 'Sorry, there was an error. Please try again.';
+        } finally {
+          this.isLoading = false;
+        }
+      }
+    }
+  }
+</script>
+
+<style>
+  .newsletter-inline {
+    background: var(--color-background);
+    padding: 2rem;
+    border-radius: 8px;
+    border: 1px solid var(--color-secondary);
+  }
+
+  .newsletter-inline__title {
+    font-family: var(--font-heading);
+    font-size: 1.25rem;
+    color: var(--color-primary);
+    margin-bottom: 0.5rem;
+  }
+
+  .newsletter-inline__description {
+    color: var(--color-text);
+    margin-bottom: 1.5rem;
+    font-size: 0.9rem;
+  }
+
+  .newsletter-inline__input-group {
+    display: flex;
+    gap: 0.5rem;
+    margin-bottom: 1rem;
+  }
+
+  .newsletter-inline__input {
+    flex: 1;
+    padding: 0.75rem;
+    border: 1px solid var(--color-secondary);
+    border-radius: 4px;
+    font-size: 0.9rem;
+  }
+
+  .newsletter-inline__input:focus {
+    outline: none;
+    border-color: var(--color-primary);
+  }
+
+  .newsletter-inline__submit {
+    padding: 0.75rem 1.5rem;
+    background: var(--color-primary);
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.9rem;
+    font-weight: 500;
+    transition: background-color 0.3s ease;
+    white-space: nowrap;
+  }
+
+  .newsletter-inline__submit:hover:not(:disabled) {
+    background: var(--color-accent);
+  }
+
+  .newsletter-inline__submit:disabled {
+    background: #ccc;
+    cursor: not-allowed;
+  }
+
+  .newsletter-inline__consent {
+    margin-bottom: 1rem;
+  }
+
+  .newsletter-inline__consent-label {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.5rem;
+    cursor: pointer;
+    font-size: 0.8rem;
+    line-height: 1.4;
+  }
+
+  .newsletter-inline__consent-checkbox {
+    margin-top: 0.1rem;
+    flex-shrink: 0;
+  }
+
+  .newsletter-inline__consent-link {
+    color: var(--color-primary);
+    text-decoration: underline;
+  }
+
+  .newsletter-inline__error {
+    color: #dc2626;
+    font-size: 0.8rem;
+    padding: 0.5rem;
+    background: #fef2f2;
+    border: 1px solid #fecaca;
+    border-radius: 4px;
+  }
+
+  .newsletter-inline__success {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 1rem;
+    background: #f0fdf4;
+    border: 1px solid #bbf7d0;
+    border-radius: 4px;
+  }
+
+  .newsletter-inline__success-icon {
+    color: #10b981;
+    flex-shrink: 0;
+  }
+
+  .newsletter-inline__success-icon svg {
+    width: 20px;
+    height: 20px;
+  }
+
+  .newsletter-inline__success-message {
+    margin: 0;
+    font-size: 0.9rem;
+    color: #065f46;
+  }
+
+  @media (max-width: 768px) {
+    .newsletter-inline {
+      padding: 1.5rem;
+    }
+
+    .newsletter-inline__input-group {
+      flex-direction: column;
+    }
+
+    .newsletter-inline__submit {
+      width: 100%;
+    }
+  }
+</style>

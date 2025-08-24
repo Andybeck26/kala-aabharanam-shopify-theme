@@ -1,0 +1,240 @@
+<!-- Cart Drawer Component -->
+<div 
+  class="cart-drawer__overlay"
+  x-show="$store.ui.cartDrawerOpen"
+  x-transition.opacity
+  @click="$store.ui.closeCartDrawer()"
+  x-cloak
+></div>
+
+<div 
+  class="cart-drawer"
+  :class="{ 'cart-drawer--open': $store.ui.cartDrawerOpen }"
+  x-show="$store.ui.cartDrawerOpen"
+  x-transition:enter="transition ease-out duration-300"
+  x-transition:enter-start="transform translate-x-full"
+  x-transition:enter-end="transform translate-x-0"
+  x-transition:leave="transition ease-in duration-200"
+  x-transition:leave-start="transform translate-x-0"
+  x-transition:leave-end="transform translate-x-full"
+  x-cloak
+>
+  <!-- Cart Header -->
+  <div class="cart-drawer__header">
+    <h2 class="cart-drawer__title">
+      {{ 'sections.cart.title' | t }} (<span x-text="$store.cart.count">0</span>)
+    </h2>
+    <button 
+      class="cart-drawer__close"
+      @click="$store.ui.closeCartDrawer()"
+      aria-label="{{ 'accessibility.close' | t }}"
+    >
+      {% render 'icon', icon: 'close' %}
+    </button>
+  </div>
+
+  <!-- Cart Body -->
+  <div class="cart-drawer__body">
+    <div x-show="$store.cart.loading" class="text-center p-lg">
+      <div class="loading-spinner"></div>
+      <p>{{ 'accessibility.loading' | t }}</p>
+    </div>
+
+    <div x-show="$store.cart.error" class="notification notification--error" x-text="$store.cart.error"></div>
+
+    <div x-show="$store.cart.count === 0 && !$store.cart.loading" class="text-center p-lg">
+      <p>{{ 'sections.cart.empty' | t }}</p>
+      <button 
+        class="btn btn--primary mt-md"
+        @click="$store.ui.closeCartDrawer()"
+      >
+        {{ 'general.continue_shopping' | t }}
+      </button>
+    </div>
+
+    <div x-show="$store.cart.count > 0" class="cart-items">
+      <template x-for="item in $store.cart.items" :key="item.key">
+        <div class="cart-item">
+          <div class="cart-item__image">
+            <img 
+              :src="item.image" 
+              :alt="item.product_title"
+              loading="lazy"
+            >
+          </div>
+          <div class="cart-item__details">
+            <h3 class="cart-item__title" x-text="item.product_title"></h3>
+            <p class="cart-item__variant" x-text="item.variant_title"></p>
+            <div class="cart-item__price">
+              <span x-text="window.KalaAabharanam.formatMoney(item.final_price)"></span>
+              <span x-show="item.original_price > item.final_price" class="cart-item__original-price">
+                <span x-text="window.KalaAabharanam.formatMoney(item.original_price)"></span>
+              </span>
+            </div>
+          </div>
+          <div class="cart-item__quantity">
+            <button 
+              @click="$store.cart.updateItem(item.key, item.quantity - 1)"
+              :disabled="item.quantity <= 1"
+              aria-label="Decrease quantity"
+            >-</button>
+            <span x-text="item.quantity"></span>
+            <button 
+              @click="$store.cart.updateItem(item.key, item.quantity + 1)"
+              aria-label="Increase quantity"
+            >+</button>
+          </div>
+          <button 
+            class="cart-item__remove"
+            @click="$store.cart.removeItem(item.key)"
+            aria-label="Remove item"
+          >
+            {% render 'icon', icon: 'trash' %}
+          </button>
+        </div>
+      </template>
+    </div>
+  </div>
+
+  <!-- Cart Footer -->
+  <div class="cart-drawer__footer" x-show="$store.cart.count > 0">
+    <div class="cart-total">
+      <div class="cart-total__subtotal">
+        <span>{{ 'sections.cart.subtotal' | t }}:</span>
+        <span x-text="window.KalaAabharanam.formatMoney($store.cart.total)"></span>
+      </div>
+      <p class="cart-total__note">{{ 'sections.cart.taxes_and_shipping_at_checkout' | t }}</p>
+    </div>
+    
+    <a 
+      href="/checkout" 
+      class="btn btn--primary btn--large w-full"
+      :class="{ 'btn--loading': $store.cart.loading }"
+      @click="window.KalaAabharanam.Analytics?.trackBeginCheckout($store.cart)"
+    >
+      {{ 'sections.cart.checkout' | t }}
+    </a>
+  </div>
+</div>
+
+<style>
+  [x-cloak] { display: none !important; }
+  
+  .cart-drawer {
+    display: flex;
+    flex-direction: column;
+  }
+  
+  .cart-item {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-md);
+    padding: var(--spacing-md) 0;
+    border-bottom: 1px solid var(--color-border);
+  }
+  
+  .cart-item__image {
+    flex-shrink: 0;
+    width: 6rem;
+    height: 6rem;
+  }
+  
+  .cart-item__image img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    border-radius: var(--border-radius-sm);
+  }
+  
+  .cart-item__details {
+    flex: 1;
+  }
+  
+  .cart-item__title {
+    margin: 0 0 var(--spacing-xs) 0;
+    font-size: var(--font-size-base);
+    font-weight: var(--font-weight-medium);
+  }
+  
+  .cart-item__variant {
+    margin: 0 0 var(--spacing-xs) 0;
+    font-size: var(--font-size-sm);
+    color: var(--color-text-secondary);
+  }
+  
+  .cart-item__price {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-sm);
+  }
+  
+  .cart-item__original-price {
+    font-size: var(--font-size-sm);
+    color: var(--color-text-secondary);
+    text-decoration: line-through;
+  }
+  
+  .cart-item__quantity {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-sm);
+    padding: var(--spacing-xs);
+    border: 1px solid var(--color-border);
+    border-radius: var(--border-radius-sm);
+  }
+  
+  .cart-item__quantity button {
+    width: 3rem;
+    height: 3rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-weight: var(--font-weight-bold);
+  }
+  
+  .cart-item__remove {
+    flex-shrink: 0;
+    width: 3rem;
+    height: 3rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: none;
+    border: none;
+    color: var(--color-error);
+    cursor: pointer;
+  }
+  
+  .cart-total__subtotal {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: var(--spacing-sm);
+    font-size: var(--font-size-lg);
+    font-weight: var(--font-weight-bold);
+  }
+  
+  .cart-total__note {
+    margin: 0 0 var(--spacing-md) 0;
+    font-size: var(--font-size-sm);
+    color: var(--color-text-secondary);
+  }
+  
+  .loading-spinner {
+    width: 3rem;
+    height: 3rem;
+    border: 3px solid var(--color-border);
+    border-top: 3px solid var(--color-puce);
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    margin: 0 auto var(--spacing-md) auto;
+  }
+  
+  @keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+  }
+</style>

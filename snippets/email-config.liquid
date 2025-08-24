@@ -1,0 +1,320 @@
+{% comment %}
+  Email marketing configuration and templates for Kala Aabharanam
+  This snippet provides email template configurations for Shopify Email
+{% endcomment %}
+
+{% comment %}
+  Welcome Email Template Configuration
+  This would be used in Shopify Email app settings
+{% endcomment %}
+
+<script type="application/json" id="welcome-email-config">
+{
+  "template_name": "welcome_series",
+  "subject": "Welcome to Kala Aabharanam - Your Journey Begins! 🌟",
+  "preview_text": "Discover the art of traditional jewelry and get your exclusive welcome discount",
+  "content": {
+    "header": {
+      "logo_url": "{{ 'logo.png' | asset_url }}",
+      "brand_colors": {
+        "primary": "#8A3324",
+        "secondary": "#D2B48C",
+        "accent": "#C71585"
+      }
+    },
+    "sections": [
+      {
+        "type": "hero",
+        "title": "Welcome to Our Community!",
+        "subtitle": "Thank you for joining the Kala Aabharanam family",
+        "image": "{{ 'email-welcome-hero.jpg' | asset_url }}"
+      },
+      {
+        "type": "discount",
+        "code": "WELCOME15",
+        "discount_percentage": 15,
+        "expiry_days": 30,
+        "description": "Use this exclusive code on your first purchase"
+      },
+      {
+        "type": "product_showcase",
+        "title": "Discover Our Collections",
+        "collections": [
+          "artificial-gold-jewellery",
+          "kalamkari-textiles",
+          "oxidized-jewellery"
+        ]
+      },
+      {
+        "type": "care_tips",
+        "title": "Jewelry Care Tips",
+        "tips": [
+          "Store in a dry place away from moisture",
+          "Clean with a soft cloth after each use",
+          "Avoid contact with perfumes and lotions"
+        ]
+      }
+    ],
+    "footer": {
+      "social_links": true,
+      "unsubscribe_link": true,
+      "contact_info": true
+    }
+  }
+}
+</script>
+
+{% comment %}
+  Newsletter Template Configuration
+  For regular newsletter campaigns
+{% endcomment %}
+
+<script type="application/json" id="newsletter-template-config">
+{
+  "template_name": "monthly_newsletter",
+  "subject_variations": [
+    "This Month's Treasures from Kala Aabharanam ✨",
+    "New Arrivals & Exclusive Offers Inside 💎",
+    "Your Monthly Dose of Traditional Elegance 🌸"
+  ],
+  "content_blocks": [
+    {
+      "type": "featured_collection",
+      "title": "New Arrivals",
+      "description": "Discover our latest handcrafted pieces"
+    },
+    {
+      "type": "blog_highlight",
+      "title": "From Our Blog",
+      "description": "Latest styling tips and cultural stories"
+    },
+    {
+      "type": "customer_spotlight",
+      "title": "Customer Spotlight",
+      "description": "See how our customers style their pieces"
+    },
+    {
+      "type": "care_corner",
+      "title": "Care Corner",
+      "description": "Monthly jewelry care and maintenance tips"
+    }
+  ]
+}
+</script>
+
+{% comment %}
+  Abandoned Cart Email Configuration
+  For cart recovery campaigns
+{% endcomment %}
+
+<script type="application/json" id="abandoned-cart-config">
+{
+  "template_name": "cart_recovery",
+  "email_sequence": [
+    {
+      "delay_hours": 1,
+      "subject": "You left something beautiful behind... 💎",
+      "discount_percentage": 0,
+      "urgency_level": "low"
+    },
+    {
+      "delay_hours": 24,
+      "subject": "Still thinking about it? Here's 10% off 🌟",
+      "discount_percentage": 10,
+      "urgency_level": "medium"
+    },
+    {
+      "delay_hours": 72,
+      "subject": "Last chance - Your cart expires soon! ⏰",
+      "discount_percentage": 15,
+      "urgency_level": "high"
+    }
+  ]
+}
+</script>
+
+{% comment %}
+  Post-Purchase Email Configuration
+  For order confirmation and follow-up
+{% endcomment %}
+
+<script type="application/json" id="post-purchase-config">
+{
+  "template_name": "post_purchase_series",
+  "emails": [
+    {
+      "trigger": "order_confirmation",
+      "subject": "Your Kala Aabharanam Order is Confirmed! 📦",
+      "content": "order_details_and_care_instructions"
+    },
+    {
+      "trigger": "order_shipped",
+      "subject": "Your treasures are on their way! 🚚",
+      "content": "tracking_info_and_styling_tips"
+    },
+    {
+      "trigger": "order_delivered",
+      "delay_days": 3,
+      "subject": "How are you loving your new pieces? ✨",
+      "content": "review_request_and_care_reminder"
+    },
+    {
+      "trigger": "review_follow_up",
+      "delay_days": 14,
+      "subject": "Share your style with our community! 📸",
+      "content": "social_sharing_and_loyalty_program"
+    }
+  ]
+}
+</script>
+
+{% comment %}
+  Segmentation Configuration
+  For targeted email campaigns
+{% endcomment %}
+
+<script type="application/json" id="segmentation-config">
+{
+  "segments": [
+    {
+      "name": "jewellery_lovers",
+      "criteria": {
+        "purchased_categories": ["artificial-gold-jewellery", "oxidized-jewellery"],
+        "email_engagement": "high"
+      },
+      "content_preferences": ["new_jewellery", "styling_tips", "exclusive_offers"]
+    },
+    {
+      "name": "kalamkari_enthusiasts",
+      "criteria": {
+        "purchased_categories": ["kalamkari-textiles"],
+        "email_engagement": "medium_to_high"
+      },
+      "content_preferences": ["kalamkari_stories", "artisan_features", "textile_care"]
+    },
+    {
+      "name": "occasional_buyers",
+      "criteria": {
+        "purchase_frequency": "low",
+        "email_engagement": "low_to_medium"
+      },
+      "content_preferences": ["seasonal_offers", "festival_collections", "gift_guides"]
+    },
+    {
+      "name": "vip_customers",
+      "criteria": {
+        "total_spent": ">5000",
+        "purchase_frequency": "high"
+      },
+      "content_preferences": ["early_access", "exclusive_pieces", "personal_styling"]
+    }
+  ]
+}
+</script>
+
+{% comment %}
+  GDPR Compliance Configuration
+  For privacy and consent management
+{% endcomment %}
+
+<script type="application/json" id="gdpr-config">
+{
+  "consent_management": {
+    "double_opt_in": true,
+    "consent_tracking": true,
+    "preference_center": {
+      "enabled": true,
+      "options": [
+        {
+          "id": "promotional",
+          "label": "Promotional emails and special offers",
+          "default": true
+        },
+        {
+          "id": "product_updates",
+          "label": "New product announcements",
+          "default": true
+        },
+        {
+          "id": "care_tips",
+          "label": "Jewelry care tips and guides",
+          "default": false
+        },
+        {
+          "id": "blog_updates",
+          "label": "Blog posts and cultural stories",
+          "default": false
+        }
+      ]
+    },
+    "unsubscribe": {
+      "one_click": true,
+      "feedback_collection": true,
+      "win_back_campaign": true
+    }
+  }
+}
+</script>
+
+{% comment %}
+  Analytics and Tracking Configuration
+  For email performance monitoring
+{% endcomment %}
+
+<script type="application/json" id="analytics-config">
+{
+  "tracking": {
+    "google_analytics": {
+      "enabled": true,
+      "utm_parameters": {
+        "source": "email",
+        "medium": "newsletter",
+        "campaign": "dynamic"
+      }
+    },
+    "facebook_pixel": {
+      "enabled": true,
+      "events": ["ViewContent", "AddToCart", "Purchase"]
+    },
+    "custom_events": [
+      {
+        "name": "email_click",
+        "parameters": ["email_type", "link_position", "customer_segment"]
+      },
+      {
+        "name": "email_conversion",
+        "parameters": ["email_campaign", "conversion_value", "time_to_convert"]
+      }
+    ]
+  },
+  "kpis": [
+    {
+      "metric": "open_rate",
+      "target": 25,
+      "benchmark": "jewelry_industry"
+    },
+    {
+      "metric": "click_rate",
+      "target": 3.5,
+      "benchmark": "jewelry_industry"
+    },
+    {
+      "metric": "conversion_rate",
+      "target": 2.0,
+      "benchmark": "ecommerce_average"
+    },
+    {
+      "metric": "revenue_per_email",
+      "target": 15,
+      "currency": "INR"
+    }
+  ]
+}
+</script>
+
+<style>
+  /* Hide configuration scripts from display */
+  script[type="application/json"] {
+    display: none;
+  }
+</style>

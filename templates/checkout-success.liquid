@@ -1,0 +1,101 @@
+{% comment %}
+  Checkout Success Template
+  Displays order confirmation after successful checkout
+{% endcomment %}
+
+<div class="checkout-success">
+  <div class="container">
+    <div class="success-content">
+      <!-- Success Icon -->
+      <div class="success-icon">
+        {% render 'icon', icon: 'check-circle' %}
+      </div>
+
+      <!-- Success Message -->
+      <h1 class="success-title">{{ 'checkout.success.title' | t }}</h1>
+      <p class="success-message">{{ 'checkout.success.message' | t }}</p>
+
+      <!-- Order Details -->
+      {% if checkout.order %}
+        <div class="success-order">
+          <h2 class="success-order__title">{{ 'checkout.success.order_details' | t }}</h2>
+          <div class="success-order__info">
+            <div class="success-order__number">
+              <strong>{{ 'checkout.success.order_number' | t }}:</strong> {{ checkout.order.name }}
+            </div>
+            <div class="success-order__total">
+              <strong>{{ 'checkout.success.total' | t }}:</strong> {{ checkout.order.total_price | money }}
+            </div>
+          </div>
+        </div>
+
+        <!-- Email Confirmation -->
+        <div class="success-email">
+          <p>{{ 'checkout.success.email_confirmation' | t: email: checkout.email }}</p>
+        </div>
+      {% endif %}
+
+      <!-- Action Buttons -->
+      <div class="success-actions">
+        <a href="{{ routes.root_url }}" class="btn btn--primary btn--large">
+          {{ 'checkout.success.continue_shopping' | t }}
+        </a>
+        
+        {% if customer %}
+          <a href="{{ routes.account_url }}" class="btn btn--secondary">
+            {{ 'checkout.success.view_account' | t }}
+          </a>
+        {% endif %}
+      </div>
+
+      <!-- Trust Badges -->
+      <div class="success-trust">
+        <div class="trust-badges">
+          <div class="trust-badge">
+            {% render 'icon', icon: 'shield' %}
+            <span>{{ 'checkout.success.secure_payment' | t }}</span>
+          </div>
+          <div class="trust-badge">
+            {% render 'icon', icon: 'truck' %}
+            <span>{{ 'checkout.success.fast_shipping' | t }}</span>
+          </div>
+          <div class="trust-badge">
+            {% render 'icon', icon: 'return' %}
+            <span>{{ 'checkout.success.easy_returns' | t }}</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Analytics Tracking -->
+{% if checkout.order %}
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+  // Track purchase for analytics
+  if (window.KalaAabharanam.Analytics) {
+    const orderData = {
+      order_number: '{{ checkout.order.name }}',
+      total_price: {{ checkout.order.total_price }},
+      tax_price: {{ checkout.order.total_tax }},
+      shipping_price: {{ checkout.order.shipping_price | default: 0 }},
+      line_items: [
+        {% for line_item in checkout.order.line_items %}
+          {
+            sku: '{{ line_item.sku }}',
+            variant_id: {{ line_item.variant_id }},
+            title: '{{ line_item.title | escape }}',
+            variant_title: '{{ line_item.variant.title | escape }}',
+            quantity: {{ line_item.quantity }},
+            price: {{ line_item.final_price }}
+          }{% unless forloop.last %},{% endunless %}
+        {% endfor %}
+      ]
+    };
+    
+    window.KalaAabharanam.Analytics.trackPurchase(orderData);
+  }
+});
+</script>
+{% endif %}

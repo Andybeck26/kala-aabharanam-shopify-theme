@@ -1,0 +1,553 @@
+<!-- Product Form Component with Alpine.js -->
+<div 
+  x-data="productForm({{ product | json }}, {{ product.variants | json }})"
+  class="product-form"
+>
+  <!-- Variant Selection -->
+  {% unless product.has_only_default_variant %}
+    <div class="product-form__variants">
+      {% for option in product.options_with_values %}
+        <div class="product-form__option">
+          <label class="form-label">{{ option.name }}</label>
+          
+          {% if option.name == 'Color' %}
+            <!-- Color swatches -->
+            <div class="variant-swatches">
+              {% for value in option.values %}
+                <input 
+                  type="radio" 
+                  name="option-{{ option.position }}"
+                  value="{{ value | escape }}"
+                  id="option-{{ option.position }}-{{ forloop.index }}"
+                  {% if option.selected_value == value %}checked{% endif %}
+                  @change="updateVariant()"
+                  class="variant-swatch__input sr-only"
+                >
+                <label 
+                  for="option-{{ option.position }}-{{ forloop.index }}"
+                  class="variant-swatch"
+                  style="background-color: {{ value | downcase }}"
+                  title="{{ value }}"
+                >
+                  <span class="sr-only">{{ value }}</span>
+                </label>
+              {% endfor %}
+            </div>
+          {% else %}
+            <!-- Dropdown for other options -->
+            <select 
+              name="option-{{ option.position }}"
+              class="form-select"
+              @change="updateVariant()"
+            >
+              {% for value in option.values %}
+                <option 
+                  value="{{ value | escape }}"
+                  {% if option.selected_value == value %}selected{% endif %}
+                >
+                  {{ value }}
+                </option>
+              {% endfor %}
+            </select>
+          {% endif %}
+        </div>
+      {% endfor %}
+    </div>
+  {% endunless %}
+
+  <!-- Price Display -->
+  <div class="product-form__price">
+    <div class="price-container">
+      <span 
+        class="price price--current"
+        :class="{ 'price--on-sale': selectedVariant?.compare_at_price > selectedVariant?.price }"
+        x-text="formatMoney(selectedVariant?.price || {{ product.price }})"
+      >
+        {{ product.price | money }}
+      </span>
+      
+      <span 
+        x-show="selectedVariant?.compare_at_price > selectedVariant?.price"
+        class="price price--compare"
+        x-text="formatMoney(selectedVariant?.compare_at_price)"
+      >
+        {% if product.compare_at_price > product.price %}
+          {{ product.compare_at_price | money }}
+        {% endif %}
+      </span>
+      
+      <span 
+        x-show="selectedVariant?.compare_at_price > selectedVariant?.price"
+        class="price price--savings"
+        x-text="'Save ' + formatMoney(selectedVariant?.compare_at_price - selectedVariant?.price)"
+      >
+      </span>
+    </div>
+    
+    <!-- Unit price if available -->
+    <div 
+      x-show="selectedVariant?.unit_price"
+      class="price__unit"
+      x-text="formatMoney(selectedVariant?.unit_price) + ' per ' + selectedVariant?.unit_price_measurement?.reference_unit"
+    >
+    </div>
+  </div>
+
+  <!-- Availability and Inventory -->
+  <div class="product-form__availability">
+    <div 
+      x-show="selectedVariant?.available && selectedVariant?.inventory_quantity > 0"
+      class="availability availability--in-stock"
+    >
+      {% render 'icon', icon: 'check' %}
+      <span x-show="selectedVariant?.inventory_quantity > 10">
+        {{ 'products.product.in_stock' | t }}
+      </span>
+      <span x-show="selectedVariant?.inventory_quantity <= 10 && selectedVariant?.inventory_quantity > 0">
+        <span x-text="'Only ' + selectedVariant?.inventory_quantity + ' left in stock'"></span>
+      </span>
+    </div>
+    
+    <div 
+      x-show="!selectedVariant?.available || selectedVariant?.inventory_quantity <= 0"
+      class="availability availability--out-of-stock"
+    >
+      {% render 'icon', icon: 'x' %}
+      {{ 'products.product.sold_out' | t }}
+    </div>
+    
+    <!-- Inventory policy message -->
+    <div 
+      x-show="selectedVariant?.inventory_policy === 'continue' && selectedVariant?.inventory_quantity <= 0"
+      class="availability availability--backorder"
+    >
+      {% render 'icon', icon: 'clock' %}
+      {{ 'products.product.backorder_available' | t }}
+    </div>
+  </div>
+
+  <!-- Quantity Selector -->
+  <div class="product-form__quantity">
+    <label class="form-label" for="quantity">
+      {{ 'products.product.quantity.label' | t }}
+    </label>
+    <div class="quantity-selector">
+      <button 
+        type="button"
+        @click="decreaseQuantity()"
+        :disabled="quantity <= 1"
+        aria-label="{{ 'products.product.quantity.decrease' | t }}"
+        class="quantity-selector__btn"
+      >
+        {% render 'icon', icon: 'minus' %}
+      </button>
+      
+      <input 
+        type="number"
+        id="quantity"
+        name="quantity"
+        min="1"
+        x-model="quantity"
+        class="quantity-selector__input"
+      >
+      
+      <button 
+        type="button"
+        @click="increaseQuantity()"
+        aria-label="{{ 'products.product.quantity.increase' | t }}"
+        class="quantity-selector__btn"
+      >
+        {% render 'icon', icon: 'plus' %}
+      </button>
+    </div>
+  </div>
+
+  <!-- Add to Cart Button -->
+  <button 
+    type="button"
+    @click="addToCart()"
+    :disabled="!canAddToCart() || loading"
+    :class="{ 'btn--loading': loading, 'btn--disabled': !canAddToCart() }"
+    class="btn btn--primary btn--large product-form__add-to-cart"
+  >
+    <span x-show="!loading">
+      <span x-show="canAddToCart()">
+        {{ 'products.product.add_to_cart' | t }}
+      </span>
+      <span x-show="!selectedVariant?.available && selectedVariant?.inventory_policy !== 'continue'">
+        {{ 'products.product.sold_out' | t }}
+      </span>
+      <span x-show="selectedVariant?.inventory_policy === 'continue' && selectedVariant?.inventory_quantity <= 0">
+        {{ 'products.product.preorder' | t }}
+      </span>
+    </span>
+    
+    <span x-show="loading" class="btn__loading">
+      <div class="loading-spinner loading-spinner--small"></div>
+      {{ 'accessibility.loading' | t }}
+    </span>
+  </button>
+  
+  <!-- Notify when available -->
+  <button 
+    x-show="!selectedVariant?.available && selectedVariant?.inventory_policy !== 'continue'"
+    type="button"
+    @click="notifyWhenAvailable()"
+    class="btn btn--secondary btn--large product-form__notify"
+  >
+    {{ 'products.product.notify_when_available' | t }}
+  </button>
+
+  <!-- Product Information -->
+  <div class="product-form__info">
+    {% if product.metafields.custom.material %}
+      <div class="product-info__item">
+        <strong>{{ 'products.product.material' | t }}:</strong>
+        {{ product.metafields.custom.material }}
+      </div>
+    {% endif %}
+    
+    {% if product.metafields.custom.care_instructions %}
+      <div class="product-info__item">
+        <strong>{{ 'products.product.care_instructions' | t }}:</strong>
+        {{ product.metafields.custom.care_instructions }}
+      </div>
+    {% endif %}
+  </div>
+</div>
+
+<script>
+  function productForm(product, variants) {
+    return {
+      product: product,
+      variants: variants,
+      selectedVariant: variants.find(v => v.available) || variants[0],
+      selectedOptions: {},
+      quantity: 1,
+      loading: false,
+      error: null,
+
+      init() {
+        // Initialize selected options based on first available variant
+        if (this.selectedVariant) {
+          this.product.options.forEach((option, index) => {
+            this.selectedOptions[option] = this.selectedVariant.options[index];
+          });
+        }
+        
+        // Set up variant change listener
+        this.$watch('selectedOptions', () => {
+          this.updateSelectedVariant();
+        });
+      },
+
+      updateSelectedVariant() {
+        const matchingVariant = this.variants.find(variant => {
+          return this.product.options.every((option, index) => {
+            return variant.options[index] === this.selectedOptions[option];
+          });
+        });
+        
+        if (matchingVariant) {
+          this.selectedVariant = matchingVariant;
+          this.updateURL();
+        }
+      },
+
+      updateURL() {
+        if (this.selectedVariant && window.history.replaceState) {
+          const url = new URL(window.location);
+          url.searchParams.set('variant', this.selectedVariant.id);
+          window.history.replaceState({}, '', url);
+        }
+      },
+
+      canAddToCart() {
+        return this.selectedVariant && 
+               (this.selectedVariant.available || 
+                this.selectedVariant.inventory_policy === 'continue');
+      },
+
+      async addToCart() {
+        if (!this.canAddToCart()) return;
+        
+        this.loading = true;
+        this.error = null;
+
+        try {
+          const response = await fetch('/cart/add.js', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              id: this.selectedVariant.id,
+              quantity: this.quantity,
+              properties: this.getCustomProperties()
+            }),
+          });
+
+          if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.message || 'Failed to add item to cart');
+          }
+
+          const result = await response.json();
+          
+          // Update cart count
+          this.$dispatch('cart:updated', result);
+          this.$dispatch('cart:open');
+          
+          // Show success message
+          this.showSuccessMessage();
+          
+        } catch (error) {
+          this.error = error.message;
+          console.error('Cart error:', error);
+        } finally {
+          this.loading = false;
+        }
+      },
+
+      getCustomProperties() {
+        const properties = {};
+        
+        // Add any custom properties from form inputs
+        const customInputs = this.$el.querySelectorAll('[data-custom-property]');
+        customInputs.forEach(input => {
+          if (input.value) {
+            properties[input.dataset.customProperty] = input.value;
+          }
+        });
+        
+        return properties;
+      },
+
+      showSuccessMessage() {
+        // Create and show success notification
+        const notification = document.createElement('div');
+        notification.className = 'product-form__success-message';
+        notification.textContent = '{{ "general.cart.item_added" | t }}';
+        
+        this.$el.appendChild(notification);
+        
+        setTimeout(() => {
+          notification.remove();
+        }, 3000);
+      },
+
+      increaseQuantity() {
+        this.quantity++;
+      },
+
+      decreaseQuantity() {
+        if (this.quantity > 1) {
+          this.quantity--;
+        }
+      },
+
+      formatMoney(cents) {
+        return window.KalaAabharanam?.formatMoney?.(cents) || 
+               new Intl.NumberFormat('en-IN', {
+                 style: 'currency',
+                 currency: '{{ cart.currency.iso_code }}',
+                 minimumFractionDigits: 0
+               }).format(cents / 100);
+      },
+
+      async notifyWhenAvailable() {
+        // Implementation for notify when available functionality
+        // This would typically open a modal or form for email collection
+        this.$dispatch('notify-modal:open', {
+          variant: this.selectedVariant,
+          product: this.product
+        });
+      }
+    }
+  }
+</script>
+
+<style>
+  .variant-swatches {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--spacing-sm);
+  }
+  
+  .variant-swatch {
+    width: 4rem;
+    height: 4rem;
+    border: 2px solid var(--color-border);
+    border-radius: var(--border-radius-sm);
+    cursor: pointer;
+    transition: all var(--transition-base);
+    position: relative;
+  }
+  
+  .variant-swatch:hover {
+    border-color: var(--color-puce);
+  }
+  
+  .variant-swatch__input:checked + .variant-swatch {
+    border-color: var(--color-puce);
+    box-shadow: 0 0 0 2px var(--color-puce);
+  }
+  
+  .quantity-selector {
+    display: flex;
+    align-items: center;
+    border: 1px solid var(--color-border);
+    border-radius: var(--border-radius-sm);
+    overflow: hidden;
+  }
+  
+  .quantity-selector__btn {
+    width: 4rem;
+    height: 4rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--color-background-primary);
+    border: none;
+    cursor: pointer;
+    transition: background-color var(--transition-base);
+  }
+  
+  .quantity-selector__btn:hover:not(:disabled) {
+    background-color: var(--color-puce);
+    color: white;
+  }
+  
+  .quantity-selector__btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+  
+  .quantity-selector__input {
+    width: 6rem;
+    height: 4rem;
+    text-align: center;
+    border: none;
+    border-left: 1px solid var(--color-border);
+    border-right: 1px solid var(--color-border);
+  }
+  
+  .quantity-selector__input:focus {
+    outline: none;
+    box-shadow: inset 0 0 0 2px var(--color-puce);
+  }
+  
+  .availability {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-xs);
+    font-weight: var(--font-weight-medium);
+  }
+  
+  .availability--in-stock {
+    color: var(--color-success);
+  }
+  
+  .availability--out-of-stock {
+    color: var(--color-error);
+  }
+
+  .availability--backorder {
+    color: var(--color-warning);
+  }
+  
+  .product-form__add-to-cart {
+    width: 100%;
+    margin: var(--spacing-lg) 0;
+  }
+
+  .product-form__notify {
+    width: 100%;
+    margin-top: var(--spacing-md);
+  }
+
+  .btn--disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+
+  .price-container {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-sm);
+    flex-wrap: wrap;
+  }
+
+  .price--on-sale {
+    color: var(--color-error);
+    font-weight: var(--font-weight-bold);
+  }
+
+  .price--compare {
+    text-decoration: line-through;
+    color: var(--color-text-secondary);
+    font-size: var(--font-size-sm);
+  }
+
+  .price--savings {
+    background: var(--color-success);
+    color: white;
+    padding: var(--spacing-xs) var(--spacing-sm);
+    border-radius: var(--border-radius-sm);
+    font-size: var(--font-size-xs);
+    font-weight: var(--font-weight-medium);
+  }
+
+  .price__unit {
+    font-size: var(--font-size-sm);
+    color: var(--color-text-secondary);
+    margin-top: var(--spacing-xs);
+  }
+
+  .product-form__success-message {
+    position: fixed;
+    top: var(--spacing-lg);
+    right: var(--spacing-lg);
+    background: var(--color-success);
+    color: white;
+    padding: var(--spacing-md) var(--spacing-lg);
+    border-radius: var(--border-radius-md);
+    box-shadow: var(--shadow-lg);
+    z-index: 1000;
+    animation: slideInRight 0.3s ease-out;
+  }
+
+  @keyframes slideInRight {
+    from {
+      transform: translateX(100%);
+      opacity: 0;
+    }
+    to {
+      transform: translateX(0);
+      opacity: 1;
+    }
+  }
+  
+  .btn--loading {
+    position: relative;
+    pointer-events: none;
+  }
+  
+  .btn__loading {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--spacing-sm);
+  }
+  
+  .loading-spinner--small {
+    width: 2rem;
+    height: 2rem;
+    border-width: 2px;
+  }
+  
+  .product-info__item {
+    margin-bottom: var(--spacing-sm);
+    font-size: var(--font-size-sm);
+  }
+</style>

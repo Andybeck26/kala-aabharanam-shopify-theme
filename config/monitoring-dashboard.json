@@ -1,0 +1,408 @@
+{
+  "dashboard_config": {
+    "name": "Kala Aabharanam Performance Dashboard",
+    "description": "Comprehensive monitoring dashboard for e-commerce performance",
+    "refresh_interval": 300,
+    "timezone": "Asia/Kolkata",
+    "currency": "INR"
+  },
+  "kpi_targets": {
+    "conversion_rate": {
+      "target": 1.5,
+      "unit": "percentage",
+      "alert_threshold": 1.0,
+      "description": "Percentage of visitors who make a purchase"
+    },
+    "average_order_value": {
+      "target": 2500,
+      "unit": "currency",
+      "alert_threshold": 2000,
+      "description": "Average value of each order"
+    },
+    "customer_acquisition_cost": {
+      "target": 500,
+      "unit": "currency",
+      "alert_threshold": 750,
+      "description": "Cost to acquire a new customer"
+    },
+    "customer_lifetime_value": {
+      "target": 5000,
+      "unit": "currency",
+      "alert_threshold": 3000,
+      "description": "Total value of a customer over their lifetime"
+    },
+    "cart_abandonment_rate": {
+      "target": 70,
+      "unit": "percentage",
+      "alert_threshold": 80,
+      "description": "Percentage of carts abandoned before checkout"
+    },
+    "page_load_speed": {
+      "target": 3.0,
+      "unit": "seconds",
+      "alert_threshold": 5.0,
+      "description": "Average page load time"
+    },
+    "bounce_rate": {
+      "target": 60,
+      "unit": "percentage",
+      "alert_threshold": 75,
+      "description": "Percentage of single-page sessions"
+    },
+    "session_duration": {
+      "target": 120,
+      "unit": "seconds",
+      "alert_threshold": 60,
+      "description": "Average time spent on site per session"
+    },
+    "return_customer_rate": {
+      "target": 25,
+      "unit": "percentage",
+      "alert_threshold": 15,
+      "description": "Percentage of customers who make repeat purchases"
+    },
+    "email_open_rate": {
+      "target": 20,
+      "unit": "percentage",
+      "alert_threshold": 15,
+      "description": "Percentage of emails opened by recipients"
+    }
+  },
+  "dashboard_widgets": [
+    {
+      "id": "revenue_overview",
+      "type": "metric_cards",
+      "title": "Revenue Overview",
+      "position": { "row": 1, "col": 1, "width": 12, "height": 2 },
+      "metrics": [
+        {
+          "name": "total_revenue",
+          "label": "Total Revenue",
+          "format": "currency",
+          "time_period": "last_30_days"
+        },
+        {
+          "name": "orders_count",
+          "label": "Orders",
+          "format": "number",
+          "time_period": "last_30_days"
+        },
+        {
+          "name": "average_order_value",
+          "label": "Average Order Value",
+          "format": "currency",
+          "time_period": "last_30_days"
+        },
+        {
+          "name": "conversion_rate",
+          "label": "Conversion Rate",
+          "format": "percentage",
+          "time_period": "last_30_days"
+        }
+      ]
+    },
+    {
+      "id": "revenue_trend",
+      "type": "line_chart",
+      "title": "Revenue Trend",
+      "position": { "row": 2, "col": 1, "width": 8, "height": 4 },
+      "metrics": ["daily_revenue"],
+      "time_period": "last_30_days",
+      "chart_options": {
+        "show_trend_line": true,
+        "show_comparison": true,
+        "comparison_period": "previous_30_days"
+      }
+    },
+    {
+      "id": "conversion_funnel",
+      "type": "funnel_chart",
+      "title": "Conversion Funnel",
+      "position": { "row": 2, "col": 9, "width": 4, "height": 4 },
+      "steps": [
+        { "name": "Visitors", "metric": "unique_visitors" },
+        { "name": "Product Views", "metric": "product_views" },
+        { "name": "Add to Cart", "metric": "add_to_cart_events" },
+        { "name": "Checkout Started", "metric": "checkout_started" },
+        { "name": "Purchase", "metric": "purchases" }
+      ],
+      "time_period": "last_7_days"
+    },
+    {
+      "id": "top_products",
+      "type": "table",
+      "title": "Top Products by Revenue",
+      "position": { "row": 3, "col": 1, "width": 6, "height": 4 },
+      "columns": [
+        { "name": "product_name", "label": "Product", "type": "text" },
+        { "name": "revenue", "label": "Revenue", "type": "currency" },
+        { "name": "units_sold", "label": "Units Sold", "type": "number" },
+        { "name": "conversion_rate", "label": "Conversion Rate", "type": "percentage" }
+      ],
+      "time_period": "last_30_days",
+      "limit": 10
+    },
+    {
+      "id": "traffic_sources",
+      "type": "pie_chart",
+      "title": "Traffic Sources",
+      "position": { "row": 3, "col": 7, "width": 6, "height": 4 },
+      "metric": "sessions",
+      "dimension": "traffic_source",
+      "time_period": "last_30_days",
+      "chart_options": {
+        "show_percentages": true,
+        "max_slices": 8
+      }
+    },
+    {
+      "id": "core_web_vitals",
+      "type": "gauge_chart",
+      "title": "Core Web Vitals",
+      "position": { "row": 4, "col": 1, "width": 12, "height": 3 },
+      "metrics": [
+        {
+          "name": "largest_contentful_paint",
+          "label": "LCP",
+          "unit": "seconds",
+          "target": 2.5,
+          "warning": 4.0,
+          "critical": 6.0
+        },
+        {
+          "name": "first_input_delay",
+          "label": "FID",
+          "unit": "milliseconds",
+          "target": 100,
+          "warning": 300,
+          "critical": 500
+        },
+        {
+          "name": "cumulative_layout_shift",
+          "label": "CLS",
+          "unit": "score",
+          "target": 0.1,
+          "warning": 0.25,
+          "critical": 0.5
+        }
+      ],
+      "time_period": "last_24_hours"
+    },
+    {
+      "id": "customer_metrics",
+      "type": "metric_cards",
+      "title": "Customer Metrics",
+      "position": { "row": 5, "col": 1, "width": 12, "height": 2 },
+      "metrics": [
+        {
+          "name": "new_customers",
+          "label": "New Customers",
+          "format": "number",
+          "time_period": "last_30_days"
+        },
+        {
+          "name": "returning_customers",
+          "label": "Returning Customers",
+          "format": "number",
+          "time_period": "last_30_days"
+        },
+        {
+          "name": "customer_lifetime_value",
+          "label": "Customer LTV",
+          "format": "currency",
+          "time_period": "all_time"
+        },
+        {
+          "name": "customer_acquisition_cost",
+          "label": "Customer CAC",
+          "format": "currency",
+          "time_period": "last_30_days"
+        }
+      ]
+    },
+    {
+      "id": "geographic_distribution",
+      "type": "map_chart",
+      "title": "Sales by Location",
+      "position": { "row": 6, "col": 1, "width": 8, "height": 4 },
+      "metric": "revenue",
+      "dimension": "country",
+      "time_period": "last_30_days",
+      "chart_options": {
+        "map_type": "india_states",
+        "color_scale": "revenue_based"
+      }
+    },
+    {
+      "id": "recent_orders",
+      "type": "table",
+      "title": "Recent Orders",
+      "position": { "row": 6, "col": 9, "width": 4, "height": 4 },
+      "columns": [
+        { "name": "order_number", "label": "Order #", "type": "text" },
+        { "name": "customer_name", "label": "Customer", "type": "text" },
+        { "name": "total_price", "label": "Total", "type": "currency" },
+        { "name": "status", "label": "Status", "type": "badge" },
+        { "name": "created_at", "label": "Date", "type": "datetime" }
+      ],
+      "time_period": "last_24_hours",
+      "limit": 20,
+      "auto_refresh": true
+    }
+  ],
+  "alerts": [
+    {
+      "id": "low_conversion_rate",
+      "name": "Low Conversion Rate Alert",
+      "condition": "conversion_rate < 1.0",
+      "severity": "warning",
+      "notification_channels": ["email", "slack"],
+      "check_interval": 3600,
+      "message": "Conversion rate has dropped below 1%. Current rate: {{conversion_rate}}%"
+    },
+    {
+      "id": "high_cart_abandonment",
+      "name": "High Cart Abandonment Alert",
+      "condition": "cart_abandonment_rate > 80",
+      "severity": "warning",
+      "notification_channels": ["email"],
+      "check_interval": 3600,
+      "message": "Cart abandonment rate is high: {{cart_abandonment_rate}}%"
+    },
+    {
+      "id": "slow_page_load",
+      "name": "Slow Page Load Alert",
+      "condition": "average_page_load_time > 5.0",
+      "severity": "critical",
+      "notification_channels": ["email", "slack", "sms"],
+      "check_interval": 900,
+      "message": "Page load time is critically slow: {{average_page_load_time}} seconds"
+    },
+    {
+      "id": "low_inventory",
+      "name": "Low Inventory Alert",
+      "condition": "product_inventory < 5",
+      "severity": "warning",
+      "notification_channels": ["email"],
+      "check_interval": 3600,
+      "message": "Low inventory alert for {{product_name}}: {{inventory_count}} units remaining"
+    },
+    {
+      "id": "error_rate_spike",
+      "name": "Error Rate Spike Alert",
+      "condition": "error_rate > 5",
+      "severity": "critical",
+      "notification_channels": ["email", "slack"],
+      "check_interval": 300,
+      "message": "Error rate spike detected: {{error_rate}}% in the last hour"
+    }
+  ],
+  "notification_channels": {
+    "email": {
+      "enabled": true,
+      "recipients": [
+        "admin@kala-aabharanam.com",
+        "marketing@kala-aabharanam.com"
+      ],
+      "smtp_settings": {
+        "host": "smtp.gmail.com",
+        "port": 587,
+        "username": "notifications@kala-aabharanam.com",
+        "use_tls": true
+      }
+    },
+    "slack": {
+      "enabled": true,
+      "webhook_url": "https://hooks.slack.com/services/YOUR/SLACK/WEBHOOK",
+      "channel": "#kala-aabharanam-alerts",
+      "username": "Monitoring Bot"
+    },
+    "sms": {
+      "enabled": false,
+      "provider": "twilio",
+      "recipients": ["+91XXXXXXXXXX"]
+    }
+  },
+  "data_sources": {
+    "google_analytics": {
+      "enabled": true,
+      "measurement_id": "G-XXXXXXXXXX",
+      "service_account_key": "path/to/service-account-key.json"
+    },
+    "shopify": {
+      "enabled": true,
+      "shop_domain": "kala-aabharanam.myshopify.com",
+      "api_version": "2023-10",
+      "access_token": "shpat_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+    },
+    "custom_metrics": {
+      "enabled": true,
+      "api_endpoint": "/api/metrics",
+      "authentication": "bearer_token"
+    }
+  },
+  "report_schedules": {
+    "daily_report": {
+      "enabled": true,
+      "time": "08:00",
+      "timezone": "Asia/Kolkata",
+      "recipients": ["admin@kala-aabharanam.com"],
+      "format": "html",
+      "include_sections": [
+        "executive_summary",
+        "sales_metrics",
+        "traffic_overview",
+        "performance_alerts",
+        "inventory_status"
+      ]
+    },
+    "weekly_report": {
+      "enabled": true,
+      "day": "monday",
+      "time": "09:00",
+      "timezone": "Asia/Kolkata",
+      "recipients": [
+        "admin@kala-aabharanam.com",
+        "marketing@kala-aabharanam.com"
+      ],
+      "format": "pdf",
+      "include_sections": [
+        "executive_summary",
+        "sales_performance",
+        "customer_analytics",
+        "marketing_performance",
+        "product_performance",
+        "recommendations"
+      ]
+    },
+    "monthly_report": {
+      "enabled": true,
+      "day": 1,
+      "time": "10:00",
+      "timezone": "Asia/Kolkata",
+      "recipients": [
+        "admin@kala-aabharanam.com",
+        "marketing@kala-aabharanam.com",
+        "stakeholders@kala-aabharanam.com"
+      ],
+      "format": "pdf",
+      "include_sections": [
+        "executive_summary",
+        "sales_performance",
+        "customer_analytics",
+        "marketing_performance",
+        "product_performance",
+        "operational_metrics",
+        "competitive_analysis",
+        "strategic_recommendations"
+      ]
+    }
+  },
+  "data_retention": {
+    "raw_metrics": "90_days",
+    "aggregated_daily": "2_years",
+    "aggregated_monthly": "5_years",
+    "error_logs": "30_days",
+    "customer_feedback": "indefinite"
+  }
+}

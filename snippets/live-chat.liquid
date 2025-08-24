@@ -1,0 +1,501 @@
+{% comment %}
+  Live Chat Integration - Tidio Chat Widget
+  This snippet handles the live chat functionality with business hours and customization
+{% endcomment %}
+
+<!-- Tidio Live Chat Configuration -->
+<script>
+  // Tidio configuration
+  window.tidioChatApi = window.tidioChatApi || {};
+  
+  // Chat widget configuration
+  window.tidioChatApi.config = {
+    // Brand colors matching Kala Aabharanam theme
+    primaryColor: '#C71585', // Puce
+    accentColor: '#FFD700',  // Gold
+    textColor: '#36454F',    // Charcoal Gray
+    backgroundColor: '#F5F5DC', // Beige
+    
+    // Business hours (IST timezone)
+    businessHours: {
+      enabled: true,
+      timezone: 'Asia/Kolkata',
+      schedule: {
+        monday: { start: '09:00', end: '18:00', enabled: true },
+        tuesday: { start: '09:00', end: '18:00', enabled: true },
+        wednesday: { start: '09:00', end: '18:00', enabled: true },
+        thursday: { start: '09:00', end: '18:00', enabled: true },
+        friday: { start: '09:00', end: '18:00', enabled: true },
+        saturday: { start: '10:00', end: '16:00', enabled: true },
+        sunday: { start: '10:00', end: '16:00', enabled: false }
+      }
+    },
+    
+    // Automated messages
+    welcomeMessage: "{{ 'chat.welcome_message' | t }}",
+    offlineMessage: "{{ 'chat.offline_message' | t }}",
+    
+    // Widget positioning
+    position: 'right',
+    bottomOffset: 20,
+    sideOffset: 20,
+    
+    // Mobile optimization
+    mobileEnabled: true,
+    mobilePosition: 'right',
+    
+    // Features
+    showOnMobile: true,
+    showOnDesktop: true,
+    hideWhenOffline: false,
+    
+    // Visitor information
+    visitorData: {
+      {% if customer %}
+      name: '{{ customer.first_name }} {{ customer.last_name }}',
+      email: '{{ customer.email }}',
+      {% endif %}
+      url: window.location.href,
+      title: document.title,
+      {% if template.name == 'product' %}
+      customFields: {
+        'Product': '{{ product.title | escape }}',
+        'Product ID': '{{ product.id }}',
+        'Product URL': '{{ shop.url }}{{ product.url }}'
+      }
+      {% elsif template.name == 'collection' %}
+      customFields: {
+        'Collection': '{{ collection.title | escape }}',
+        'Collection URL': '{{ shop.url }}{{ collection.url }}'
+      }
+      {% endif %}
+    }
+  };
+
+  // Initialize chat when DOM is ready
+  document.addEventListener('DOMContentLoaded', function() {
+    // Check if Tidio script should be loaded
+    if (shouldLoadChat()) {
+      loadTidioChat();
+    }
+    
+    // Handle page visibility changes
+    document.addEventListener('visibilitychange', function() {
+      if (!document.hidden && window.tidioChatApi) {
+        // Update visitor data when page becomes visible
+        updateVisitorData();
+      }
+    });
+  });
+
+  // Function to determine if chat should be loaded
+  function shouldLoadChat() {
+    // Don't load on checkout pages for better performance
+    if (window.location.pathname.includes('/checkout')) {
+      return false;
+    }
+    
+    // Don't load if user has opted out
+    if (localStorage.getItem('tidio-chat-disabled') === 'true') {
+      return false;
+    }
+    
+    return true;
+  }
+
+  // Load Tidio chat script
+  function loadTidioChat() {
+    // Replace 'YOUR_PUBLIC_KEY' with actual Tidio public key
+    const tidioScript = document.createElement('script');
+    tidioScript.src = '//code.tidio.co/YOUR_PUBLIC_KEY.js';
+    tidioScript.async = true;
+    
+    tidioScript.onload = function() {
+      console.log('Tidio chat loaded successfully');
+      
+      // Configure chat after loading
+      configureTidioChat();
+      
+      // Track chat initialization
+      if (typeof gtag !== 'undefined') {
+        gtag('event', 'chat_loaded', {
+          'event_category': 'engagement',
+          'event_label': 'tidio_chat'
+        });
+      }
+    };
+    
+    tidioScript.onerror = function() {
+      console.error('Failed to load Tidio chat');
+      showFallbackContact();
+    };
+    
+    document.head.appendChild(tidioScript);
+  }
+
+  // Configure Tidio chat after loading
+  function configureTidioChat() {
+    if (typeof tidioChatApi !== 'undefined') {
+      // Set visitor data
+      updateVisitorData();
+      
+      // Configure business hours messages
+      tidioChatApi.on('ready', function() {
+        const now = new Date();
+        const currentHour = now.getHours();
+        const currentDay = now.getDay(); // 0 = Sunday, 1 = Monday, etc.
+        
+        if (!isBusinessHours(currentDay, currentHour)) {
+          tidioChatApi.display(false);
+          showOfflineMessage();
+        }
+      });
+      
+      // Track chat events
+      tidioChatApi.on('messageFromVisitor', function(data) {
+        if (typeof gtag !== 'undefined') {
+          gtag('event', 'chat_message_sent', {
+            'event_category': 'engagement',
+            'event_label': 'customer_message'
+          });
+        }
+      });
+      
+      tidioChatApi.on('messageFromOperator', function(data) {
+        if (typeof gtag !== 'undefined') {
+          gtag('event', 'chat_message_received', {
+            'event_category': 'engagement',
+            'event_label': 'operator_message'
+          });
+        }
+      });
+    }
+  }
+
+  // Update visitor data
+  function updateVisitorData() {
+    if (typeof tidioChatApi !== 'undefined' && tidioChatApi.setVisitorData) {
+      tidioChatApi.setVisitorData(window.tidioChatApi.config.visitorData);
+    }
+  }
+
+  // Check if current time is within business hours
+  function isBusinessHours(day, hour) {
+    const schedule = window.tidioChatApi.config.businessHours.schedule;
+    const dayNames = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+    const daySchedule = schedule[dayNames[day]];
+    
+    if (!daySchedule || !daySchedule.enabled) {
+      return false;
+    }
+    
+    const startHour = parseInt(daySchedule.start.split(':')[0]);
+    const endHour = parseInt(daySchedule.end.split(':')[0]);
+    
+    return hour >= startHour && hour < endHour;
+  }
+
+  // Show offline message when chat is not available
+  function showOfflineMessage() {
+    const offlineNotice = document.createElement('div');
+    offlineNotice.className = 'chat-offline-notice';
+    offlineNotice.innerHTML = `
+      <div class="chat-offline-notice__content">
+        <div class="chat-offline-notice__icon">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z" fill="currentColor"/>
+          </svg>
+        </div>
+        <div class="chat-offline-notice__text">
+          <strong>{{ 'chat.offline_title' | t }}</strong>
+          <p>{{ 'chat.offline_message' | t }}</p>
+          <p class="chat-offline-notice__hours">{{ 'chat.business_hours' | t }}</p>
+        </div>
+        <button class="chat-offline-notice__close" onclick="this.parentElement.parentElement.remove()">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+    `;
+    
+    document.body.appendChild(offlineNotice);
+    
+    // Auto-remove after 10 seconds
+    setTimeout(() => {
+      if (offlineNotice.parentElement) {
+        offlineNotice.remove();
+      }
+    }, 10000);
+  }
+
+  // Show fallback contact options if chat fails to load
+  function showFallbackContact() {
+    const fallbackContact = document.createElement('div');
+    fallbackContact.className = 'chat-fallback-contact';
+    fallbackContact.innerHTML = `
+      <div class="chat-fallback-contact__content">
+        <div class="chat-fallback-contact__header">
+          <strong>{{ 'chat.fallback_title' | t }}</strong>
+          <button class="chat-fallback-contact__close" onclick="this.parentElement.parentElement.parentElement.remove()">
+            <span aria-hidden="true">&times;</span>
+          </button>
+        </div>
+        <div class="chat-fallback-contact__options">
+          <a href="mailto:{{ settings.contact_email | default: 'hello@kalaaabharanam.com' }}" class="chat-fallback-contact__option">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M20 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.89 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4l-8 5-8-5V6l8 5 8-5v2z" fill="currentColor"/>
+            </svg>
+            {{ 'chat.email_us' | t }}
+          </a>
+          <a href="tel:{{ settings.contact_phone | default: '+91-XXXXXXXXXX' }}" class="chat-fallback-contact__option">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M6.62 10.79c1.44 2.83 3.76 5.14 6.59 6.59l2.2-2.2c.27-.27.67-.36 1.02-.24 1.12.37 2.33.57 3.57.57.55 0 1 .45 1 1V20c0 .55-.45 1-1 1-9.39 0-17-7.61-17-17 0-.55.45-1 1-1h3.5c.55 0 1 .45 1 1 0 1.25.2 2.45.57 3.57.11.35.03.74-.25 1.02l-2.2 2.2z" fill="currentColor"/>
+            </svg>
+            {{ 'chat.call_us' | t }}
+          </a>
+          <a href="{{ routes.contact_url }}" class="chat-fallback-contact__option">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M14 2H6c-1.1 0-1.99.9-1.99 2L4 20c0 1.1.89 2 2 2h8c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm0 18H6V4h8v16z" fill="currentColor"/>
+            </svg>
+            {{ 'chat.contact_form' | t }}
+          </a>
+        </div>
+      </div>
+    `;
+    
+    document.body.appendChild(fallbackContact);
+  }
+
+  // Public API for controlling chat
+  window.KalaAabharanamChat = {
+    show: function() {
+      if (typeof tidioChatApi !== 'undefined') {
+        tidioChatApi.display(true);
+        tidioChatApi.open();
+      }
+    },
+    hide: function() {
+      if (typeof tidioChatApi !== 'undefined') {
+        tidioChatApi.display(false);
+      }
+    },
+    toggle: function() {
+      if (typeof tidioChatApi !== 'undefined') {
+        tidioChatApi.toggle();
+      }
+    },
+    disable: function() {
+      localStorage.setItem('tidio-chat-disabled', 'true');
+      this.hide();
+    },
+    enable: function() {
+      localStorage.removeItem('tidio-chat-disabled');
+      if (!document.querySelector('script[src*="tidio.co"]')) {
+        loadTidioChat();
+      } else {
+        this.show();
+      }
+    }
+  };
+</script>
+
+<!-- Chat Widget Styles -->
+<style>
+  /* Offline Notice Styles */
+  .chat-offline-notice {
+    position: fixed;
+    bottom: 100px;
+    right: 20px;
+    z-index: 9999;
+    max-width: 320px;
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12);
+    border: 1px solid var(--color-border);
+    animation: slideInUp 0.3s ease-out;
+  }
+
+  .chat-offline-notice__content {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--spacing-md);
+    padding: var(--spacing-lg);
+  }
+
+  .chat-offline-notice__icon {
+    flex-shrink: 0;
+    width: 24px;
+    height: 24px;
+    color: var(--color-puce);
+  }
+
+  .chat-offline-notice__text {
+    flex: 1;
+  }
+
+  .chat-offline-notice__text strong {
+    display: block;
+    color: var(--color-text-primary);
+    margin-bottom: var(--spacing-xs);
+    font-size: var(--font-size-base);
+  }
+
+  .chat-offline-notice__text p {
+    margin: 0 0 var(--spacing-xs) 0;
+    font-size: var(--font-size-sm);
+    color: var(--color-text-secondary);
+    line-height: 1.4;
+  }
+
+  .chat-offline-notice__hours {
+    font-weight: var(--font-weight-medium);
+    color: var(--color-puce) !important;
+  }
+
+  .chat-offline-notice__close {
+    background: none;
+    border: none;
+    font-size: 20px;
+    cursor: pointer;
+    color: var(--color-text-secondary);
+    padding: 0;
+    width: 24px;
+    height: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+
+  .chat-offline-notice__close:hover {
+    color: var(--color-text-primary);
+  }
+
+  /* Fallback Contact Styles */
+  .chat-fallback-contact {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    z-index: 9999;
+    max-width: 300px;
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12);
+    border: 1px solid var(--color-border);
+    animation: slideInUp 0.3s ease-out;
+  }
+
+  .chat-fallback-contact__content {
+    padding: var(--spacing-lg);
+  }
+
+  .chat-fallback-contact__header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: var(--spacing-md);
+  }
+
+  .chat-fallback-contact__header strong {
+    color: var(--color-text-primary);
+    font-size: var(--font-size-base);
+  }
+
+  .chat-fallback-contact__close {
+    background: none;
+    border: none;
+    font-size: 20px;
+    cursor: pointer;
+    color: var(--color-text-secondary);
+    padding: 0;
+    width: 24px;
+    height: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .chat-fallback-contact__close:hover {
+    color: var(--color-text-primary);
+  }
+
+  .chat-fallback-contact__options {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-sm);
+  }
+
+  .chat-fallback-contact__option {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-sm);
+    padding: var(--spacing-sm) var(--spacing-md);
+    background: var(--color-background-secondary);
+    border-radius: var(--border-radius-sm);
+    text-decoration: none;
+    color: var(--color-text-primary);
+    font-size: var(--font-size-sm);
+    transition: background-color var(--transition-base);
+  }
+
+  .chat-fallback-contact__option:hover {
+    background: var(--color-puce);
+    color: white;
+  }
+
+  .chat-fallback-contact__option svg {
+    flex-shrink: 0;
+  }
+
+  /* Animation */
+  @keyframes slideInUp {
+    from {
+      transform: translateY(100%);
+      opacity: 0;
+    }
+    to {
+      transform: translateY(0);
+      opacity: 1;
+    }
+  }
+
+  /* Mobile responsive adjustments */
+  @media (max-width: 767px) {
+    .chat-offline-notice,
+    .chat-fallback-contact {
+      right: var(--spacing-md);
+      left: var(--spacing-md);
+      max-width: none;
+    }
+
+    .chat-offline-notice__content,
+    .chat-fallback-contact__content {
+      padding: var(--spacing-md);
+    }
+  }
+
+  /* Tidio widget customizations */
+  #tidio-chat-iframe {
+    border-radius: 12px !important;
+  }
+
+  .tidio-chat-button {
+    background: var(--color-puce) !important;
+    border-radius: 50% !important;
+    box-shadow: 0 4px 12px rgba(199, 21, 133, 0.3) !important;
+  }
+
+  .tidio-chat-button:hover {
+    transform: scale(1.05) !important;
+    transition: transform 0.2s ease !important;
+  }
+
+  /* Hide chat on checkout pages */
+  .template-checkout .tidio-chat-button,
+  .template-checkout #tidio-chat-iframe {
+    display: none !important;
+  }
+</style>
+
+<!-- Preload Tidio resources -->
+<link rel="preconnect" href="https://code.tidio.co" crossorigin>
+<link rel="dns-prefetch" href="https://code.tidio.co">

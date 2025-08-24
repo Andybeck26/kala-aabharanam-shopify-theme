@@ -1,0 +1,439 @@
+{% comment %}
+  Security Headers and Content Security Policy
+  Implements security best practices for the Kala Aabharanam theme
+{% endcomment %}
+
+<!-- Content Security Policy -->
+<meta http-equiv="Content-Security-Policy" content="
+  default-src 'self' *.shopify.com *.shopifycdn.com;
+  script-src 'self' 'unsafe-inline' 'unsafe-eval' 
+    *.shopify.com 
+    *.shopifycdn.com 
+    *.google-analytics.com 
+    *.googletagmanager.com 
+    *.googleapis.com
+    *.gstatic.com
+    cdn.jsdelivr.net
+    polyfill.io
+    code.tidio.co
+    widget.judgeme.io;
+  style-src 'self' 'unsafe-inline' 
+    *.shopifycdn.com 
+    fonts.googleapis.com
+    cdn.jsdelivr.net;
+  img-src 'self' data: blob: 
+    *.shopifycdn.com 
+    *.shopify.com
+    *.google-analytics.com
+    *.googletagmanager.com
+    *.facebook.com
+    *.instagram.com;
+  font-src 'self' 
+    fonts.gstatic.com 
+    *.shopifycdn.com;
+  connect-src 'self' 
+    *.shopify.com 
+    *.google-analytics.com
+    *.googletagmanager.com
+    api.judgeme.io;
+  frame-src 'self' 
+    *.shopify.com
+    *.youtube.com
+    *.vimeo.com;
+  object-src 'none';
+  base-uri 'self';
+  form-action 'self' *.shopify.com;
+  upgrade-insecure-requests;
+">
+
+<!-- Referrer Policy -->
+<meta name="referrer" content="strict-origin-when-cross-origin">
+
+<!-- X-Content-Type-Options -->
+<meta http-equiv="X-Content-Type-Options" content="nosniff">
+
+<!-- X-Frame-Options -->
+<meta http-equiv="X-Frame-Options" content="SAMEORIGIN">
+
+<!-- X-XSS-Protection -->
+<meta http-equiv="X-XSS-Protection" content="1; mode=block">
+
+<!-- Permissions Policy -->
+<meta http-equiv="Permissions-Policy" content="
+  camera=(),
+  microphone=(),
+  geolocation=(self),
+  payment=(self *.shopify.com),
+  usb=(),
+  magnetometer=(),
+  gyroscope=(),
+  accelerometer=()
+">
+
+<!-- Strict Transport Security (HSTS) - Note: This should ideally be set at server level -->
+{% comment %}
+  HSTS header should be configured at the Shopify/server level:
+  Strict-Transport-Security: max-age=31536000; includeSubDomains; preload
+{% endcomment %}
+
+<!-- Subresource Integrity for critical external resources -->
+{% comment %}
+  SRI hashes for external scripts - update these when versions change
+{% endcomment %}
+
+<!-- Security-focused meta tags -->
+<meta name="format-detection" content="telephone=no">
+<meta name="msapplication-tap-highlight" content="no">
+
+<!-- Prevent information disclosure -->
+<meta name="generator" content="">
+<meta name="author" content="Kala Aabharanam">
+
+{% comment %}
+  Additional security considerations:
+  1. All forms use CSRF tokens (handled by Shopify)
+  2. User input is sanitized (handled by Liquid templating)
+  3. HTTPS is enforced (handled by Shopify)
+  4. Session management is secure (handled by Shopify)
+{% endcomment %}
+
+<script>
+  // Security monitoring and protection
+  (function() {
+    'use strict';
+    
+    // Detect and prevent common attacks
+    const SecurityMonitor = {
+      
+      init() {
+        this.setupCSRFProtection();
+        this.setupXSSProtection();
+        this.setupClickjackingProtection();
+        this.setupConsoleWarning();
+        this.monitorSecurityEvents();
+      },
+      
+      // CSRF Protection for AJAX requests
+      setupCSRFProtection() {
+        // Get CSRF token from meta tag or form
+        const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content ||
+                         document.querySelector('input[name="authenticity_token"]')?.value;
+        
+        if (csrfToken) {
+          // Add CSRF token to all AJAX requests
+          const originalFetch = window.fetch;
+          window.fetch = function(url, options = {}) {
+            if (options.method && options.method.toUpperCase() !== 'GET') {
+              options.headers = options.headers || {};
+              options.headers['X-CSRF-Token'] = csrfToken;
+            }
+            return originalFetch(url, options);
+          };
+        }
+      },
+      
+      // XSS Protection
+      setupXSSProtection() {
+        // Sanitize user inputs
+        const inputs = document.querySelectorAll('input[type="text"], textarea');
+        inputs.forEach(input => {
+          input.addEventListener('input', (e) => {
+            // Basic XSS prevention - remove script tags
+            const value = e.target.value;
+            const sanitized = value.replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '');
+            if (value !== sanitized) {
+              e.target.value = sanitized;
+              console.warn('Potential XSS attempt blocked');
+            }
+          });
+        });
+        
+        // Monitor for DOM manipulation attempts
+        const observer = new MutationObserver((mutations) => {
+          mutations.forEach(mutation => {
+            mutation.addedNodes.forEach(node => {
+              if (node.nodeType === Node.ELEMENT_NODE) {
+                // Check for suspicious script injections
+                const scripts = node.querySelectorAll('script');
+                scripts.forEach(script => {
+                  if (!script.src || !this.isAllowedScript(script.src)) {
+                    console.warn('Suspicious script detected:', script);
+                    script.remove();
+                  }
+                });
+              }
+            });
+          });
+        });
+        
+        observer.observe(document.body, {
+          childList: true,
+          subtree: true
+        });
+      },
+      
+      // Check if script source is allowed
+      isAllowedScript(src) {
+        const allowedDomains = [
+          'shopify.com',
+          'shopifycdn.com',
+          'google-analytics.com',
+          'googletagmanager.com',
+          'googleapis.com',
+          'gstatic.com',
+          'jsdelivr.net',
+          'polyfill.io',
+          'tidio.co',
+          'judgeme.io'
+        ];
+        
+        return allowedDomains.some(domain => src.includes(domain));
+      },
+      
+      // Clickjacking Protection
+      setupClickjackingProtection() {
+        // Verify we're not in an iframe (unless it's allowed)
+        if (window.top !== window.self) {
+          const allowedParents = [
+            'shopify.com',
+            'shopify-admin.com'
+          ];
+          
+          try {
+            const parentOrigin = window.parent.location.hostname;
+            const isAllowed = allowedParents.some(domain => 
+              parentOrigin.includes(domain)
+            );
+            
+            if (!isAllowed) {
+              console.warn('Potential clickjacking attempt detected');
+              window.top.location = window.self.location;
+            }
+          } catch (e) {
+            // Cross-origin access blocked - potential clickjacking
+            console.warn('Cross-origin iframe detected');
+            window.top.location = window.self.location;
+          }
+        }
+      },
+      
+      // Console Warning for Developers
+      setupConsoleWarning() {
+        console.log('%c🛡️ Security Notice', 'color: #ff6b6b; font-size: 20px; font-weight: bold;');
+        console.log('%cThis is a browser feature intended for developers. If someone told you to copy-paste something here, it could be a scam that will give attackers access to your account.', 'color: #ff6b6b; font-size: 14px;');
+        console.log('%cSee https://en.wikipedia.org/wiki/Self-XSS for more information.', 'color: #ff6b6b; font-size: 12px;');
+      },
+      
+      // Monitor Security Events
+      monitorSecurityEvents() {
+        // Monitor for security-related events
+        window.addEventListener('securitypolicyviolation', (e) => {
+          console.warn('CSP Violation:', {
+            blockedURI: e.blockedURI,
+            violatedDirective: e.violatedDirective,
+            originalPolicy: e.originalPolicy
+          });
+          
+          // Report to analytics if available
+          if (typeof gtag !== 'undefined') {
+            gtag('event', 'security_violation', {
+              event_category: 'Security',
+              event_label: e.violatedDirective,
+              value: 1
+            });
+          }
+        });
+        
+        // Monitor for suspicious activity
+        let suspiciousActivityCount = 0;
+        const maxSuspiciousActivity = 5;
+        
+        document.addEventListener('click', (e) => {
+          // Check for rapid clicking (potential bot activity)
+          const now = Date.now();
+          if (!this.lastClickTime) {
+            this.lastClickTime = now;
+            return;
+          }
+          
+          if (now - this.lastClickTime < 100) {
+            suspiciousActivityCount++;
+            if (suspiciousActivityCount > maxSuspiciousActivity) {
+              console.warn('Suspicious rapid clicking detected');
+              // Could implement rate limiting here
+            }
+          } else {
+            suspiciousActivityCount = 0;
+          }
+          
+          this.lastClickTime = now;
+        });
+        
+        // Monitor for form tampering
+        const forms = document.querySelectorAll('form');
+        forms.forEach(form => {
+          const originalAction = form.action;
+          const originalMethod = form.method;
+          
+          // Check for form modifications
+          setInterval(() => {
+            if (form.action !== originalAction || form.method !== originalMethod) {
+              console.warn('Form tampering detected:', form);
+              form.action = originalAction;
+              form.method = originalMethod;
+            }
+          }, 1000);
+        });
+      }
+    };
+    
+    // Initialize security monitoring
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', () => {
+        SecurityMonitor.init();
+      });
+    } else {
+      SecurityMonitor.init();
+    }
+    
+    // Export for debugging (in development only)
+    if (window.location.hostname === 'localhost' || window.location.hostname.includes('ngrok')) {
+      window.SecurityMonitor = SecurityMonitor;
+    }
+    
+  })();
+</script>
+
+{% comment %}
+  Privacy and Cookie Compliance
+{% endcomment %}
+<script>
+  // Basic privacy compliance
+  (function() {
+    'use strict';
+    
+    const PrivacyCompliance = {
+      
+      init() {
+        this.setupCookieConsent();
+        this.setupDataProtection();
+      },
+      
+      setupCookieConsent() {
+        // Check if user has already consented
+        const hasConsented = localStorage.getItem('cookie-consent');
+        
+        if (!hasConsented && !Shopify.designMode) {
+          this.showCookieNotice();
+        }
+      },
+      
+      showCookieNotice() {
+        const notice = document.createElement('div');
+        notice.className = 'cookie-notice';
+        notice.innerHTML = `
+          <div class="cookie-notice__content">
+            <p>We use cookies to enhance your experience and analyze site usage. By continuing to browse, you consent to our use of cookies.</p>
+            <div class="cookie-notice__actions">
+              <button class="btn btn--primary" onclick="PrivacyCompliance.acceptCookies()">Accept</button>
+              <a href="/pages/privacy-policy" class="btn btn--secondary">Learn More</a>
+            </div>
+          </div>
+        `;
+        
+        document.body.appendChild(notice);
+      },
+      
+      acceptCookies() {
+        localStorage.setItem('cookie-consent', 'true');
+        const notice = document.querySelector('.cookie-notice');
+        if (notice) {
+          notice.remove();
+        }
+        
+        // Initialize analytics after consent
+        this.initializeAnalytics();
+      },
+      
+      initializeAnalytics() {
+        // Initialize Google Analytics and other tracking
+        if (typeof gtag !== 'undefined') {
+          gtag('consent', 'update', {
+            'analytics_storage': 'granted'
+          });
+        }
+      },
+      
+      setupDataProtection() {
+        // Implement data protection measures
+        
+        // Prevent data leakage through referrer
+        const links = document.querySelectorAll('a[href^="http"]:not([href*="' + location.hostname + '"])');
+        links.forEach(link => {
+          if (!link.getAttribute('rel')) {
+            link.setAttribute('rel', 'noopener noreferrer');
+          }
+        });
+        
+        // Clear sensitive data from forms on page unload
+        window.addEventListener('beforeunload', () => {
+          const sensitiveInputs = document.querySelectorAll('input[type="password"], input[name*="credit"], input[name*="card"]');
+          sensitiveInputs.forEach(input => {
+            input.value = '';
+          });
+        });
+      }
+    };
+    
+    // Initialize privacy compliance
+    PrivacyCompliance.init();
+    
+    // Export for global access
+    window.PrivacyCompliance = PrivacyCompliance;
+    
+  })();
+</script>
+
+<style>
+  /* Cookie notice styles */
+  .cookie-notice {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: rgba(0, 0, 0, 0.9);
+    color: white;
+    padding: 1rem;
+    z-index: 10000;
+    transform: translateY(100%);
+    animation: slideUp 0.3s ease-out forwards;
+  }
+  
+  .cookie-notice__content {
+    max-width: 1200px;
+    margin: 0 auto;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+  }
+  
+  .cookie-notice__actions {
+    display: flex;
+    gap: 0.5rem;
+    flex-shrink: 0;
+  }
+  
+  @keyframes slideUp {
+    to {
+      transform: translateY(0);
+    }
+  }
+  
+  @media (max-width: 768px) {
+    .cookie-notice__content {
+      flex-direction: column;
+      text-align: center;
+    }
+  }
+</style>

@@ -1,0 +1,244 @@
+{% comment %}
+  Performance Monitoring Snippet
+  Tracks Core Web Vitals and sends data to Google Analytics
+{% endcomment %}
+
+<script>
+  // Core Web Vitals monitoring
+  (function() {
+    'use strict';
+    
+    // Only run performance monitoring in production
+    if (Shopify.designMode) return;
+    
+    // Web Vitals library (inline for performance)
+    function getCLS(onReport) {
+      let clsValue = 0;
+      let clsEntries = [];
+      let sessionValue = 0;
+      let sessionEntries = [];
+      
+      const entryHandler = (entry) => {
+        if (!entry.hadRecentInput) {
+          const firstSessionEntry = sessionEntries[0];
+          const lastSessionEntry = sessionEntries[sessionEntries.length - 1];
+          
+          if (sessionValue && entry.startTime - lastSessionEntry.startTime < 1000 &&
+              entry.startTime - firstSessionEntry.startTime < 5000) {
+            sessionValue += entry.value;
+            sessionEntries.push(entry);
+          } else {
+            sessionValue = entry.value;
+            sessionEntries = [entry];
+          }
+          
+          if (sessionValue > clsValue) {
+            clsValue = sessionValue;
+            clsEntries = sessionEntries.slice();
+            onReport({
+              name: 'CLS',
+              value: clsValue,
+              entries: clsEntries
+            });
+          }
+        }
+      };
+      
+      const observer = new PerformanceObserver((list) => {
+        list.getEntries().forEach(entryHandler);
+      });
+      
+      observer.observe({type: 'layout-shift', buffered: true});
+    }
+    
+    function getFID(onReport) {
+      const observer = new PerformanceObserver((list) => {
+        list.getEntries().forEach((entry) => {
+          onReport({
+            name: 'FID',
+            value: entry.processingStart - entry.startTime,
+            entries: [entry]
+          });
+        });
+      });
+      
+      observer.observe({type: 'first-input', buffered: true});
+    }
+    
+    function getLCP(onReport) {
+      const observer = new PerformanceObserver((list) => {
+        const entries = list.getEntries();
+        const lastEntry = entries[entries.length - 1];
+        onReport({
+          name: 'LCP',
+          value: lastEntry.startTime,
+          entries: [lastEntry]
+        });
+      });
+      
+      observer.observe({type: 'largest-contentful-paint', buffered: true});
+    }
+    
+    function getFCP(onReport) {
+      const observer = new PerformanceObserver((list) => {
+        list.getEntries().forEach((entry) => {
+          if (entry.name === 'first-contentful-paint') {
+            onReport({
+              name: 'FCP',
+              value: entry.startTime,
+              entries: [entry]
+            });
+          }
+        });
+      });
+      
+      observer.observe({type: 'paint', buffered: true});
+    }
+    
+    function getTTFB(onReport) {
+      const navigationEntry = performance.getEntriesByType('navigation')[0];
+      if (navigationEntry) {
+        onReport({
+          name: 'TTFB',
+          value: navigationEntry.responseStart,
+          entries: [navigationEntry]
+        });
+      }
+    }
+    
+    // Report to Google Analytics
+    function sendToAnalytics(metric) {
+      if (typeof gtag !== 'undefined') {
+        gtag('event', metric.name, {
+          event_category: 'Web Vitals',
+          event_label: '{{ template.name }}',
+          value: Math.round(metric.value),
+          non_interaction: true,
+          custom_map: {
+            metric_name: metric.name,
+            metric_value: metric.value,
+            page_template: '{{ template.name }}',
+            theme_version: '{{ theme.version | default: "1.0.0" }}'
+          }
+        });
+      }
+      
+      // Also send to console for debugging
+      console.log(`${metric.name}: ${metric.value}ms`);
+    }
+    
+    // Initialize monitoring
+    getCLS(sendToAnalytics);
+    getFID(sendToAnalytics);
+    getLCP(sendToAnalytics);
+    getFCP(sendToAnalytics);
+    getTTFB(sendToAnalytics);
+    
+    // Additional performance metrics
+    window.addEventListener('load', () => {
+      // Page Load Time
+      const loadTime = performance.timing.loadEventEnd - performance.timing.navigationStart;
+      sendToAnalytics({
+        name: 'PLT',
+        value: loadTime
+      });
+      
+      // DOM Content Loaded
+      const domContentLoaded = performance.timing.domContentLoadedEventEnd - performance.timing.navigationStart;
+      sendToAnalytics({
+        name: 'DCL',
+        value: domContentLoaded
+      });
+      
+      // Resource timing
+      const resources = performance.getEntriesByType('resource');
+      const slowResources = resources.filter(resource => resource.duration > 1000);
+      
+      if (slowResources.length > 0) {
+        console.warn('Slow loading resources detected:', slowResources);
+      }
+    });
+    
+    // Monitor long tasks
+    if ('PerformanceObserver' in window) {
+      const longTaskObserver = new PerformanceObserver((list) => {
+        list.getEntries().forEach((entry) => {
+          if (entry.duration > 50) {
+            console.warn('Long task detected:', entry);
+            sendToAnalytics({
+              name: 'LT',
+              value: entry.duration
+            });
+          }
+        });
+      });
+      
+      try {
+        longTaskObserver.observe({type: 'longtask', buffered: true});
+      } catch (e) {
+        // Long task API not supported
+      }
+    }
+    
+    // Performance budget alerts
+    const performanceBudget = {
+      LCP: 2500,  // 2.5 seconds
+      FID: 100,   // 100 milliseconds
+      CLS: 0.1,   // 0.1
+      FCP: 1800,  // 1.8 seconds
+      TTFB: 800   // 800 milliseconds
+    };
+    
+    function checkPerformanceBudget(metric) {
+      const budget = performanceBudget[metric.name];
+      if (budget && metric.value > budget) {
+        console.warn(`Performance budget exceeded for ${metric.name}: ${metric.value} > ${budget}`);
+        
+        // Send budget violation to analytics
+        if (typeof gtag !== 'undefined') {
+          gtag('event', 'performance_budget_exceeded', {
+            event_category: 'Performance',
+            event_label: metric.name,
+            value: Math.round(metric.value),
+            custom_map: {
+              budget_limit: budget,
+              actual_value: metric.value,
+              page_template: '{{ template.name }}'
+            }
+          });
+        }
+      }
+    }
+    
+    // Enhanced reporting with budget checking
+    const originalSendToAnalytics = sendToAnalytics;
+    sendToAnalytics = function(metric) {
+      originalSendToAnalytics(metric);
+      checkPerformanceBudget(metric);
+    };
+    
+  })();
+</script>
+
+{% comment %}
+  Performance hints for critical resources
+{% endcomment %}
+<link rel="preload" href="{{ 'application.css' | asset_url }}" as="style">
+<link rel="preload" href="{{ 'application.js' | asset_url }}" as="script">
+
+{% comment %}
+  Preload critical fonts
+{% endcomment %}
+{%- unless settings.type_body_font.system? -%}
+  <link rel="preload" href="{{ settings.type_body_font | font_url }}" as="font" type="font/woff2" crossorigin>
+{%- endunless -%}
+{%- unless settings.type_header_font.system? -%}
+  <link rel="preload" href="{{ settings.type_header_font | font_url }}" as="font" type="font/woff2" crossorigin>
+{%- endunless -%}
+
+{% comment %}
+  Preload hero image on homepage
+{% endcomment %}
+{%- if template.name == 'index' and section.settings.hero_image -%}
+  <link rel="preload" href="{{ section.settings.hero_image | image_url: width: 1200 }}" as="image">
+{%- endif -%}

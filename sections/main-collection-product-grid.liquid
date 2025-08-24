@@ -1,0 +1,325 @@
+{% comment %}
+  Main Collection Product Grid Section
+  Displays products with filtering, sorting, and pagination
+{% endcomment %}
+
+{% paginate collection.products by section.settings.products_per_page %}
+  <div class="collection-page" x-data="collectionPage()">
+    <!-- Collection Toolbar -->
+    <div class="collection-toolbar">
+      <div class="container">
+        <div class="collection-toolbar__content">
+          <div class="collection-results">
+            {% if section.settings.enable_filtering %}
+              <button 
+                class="filters-toggle md:hidden"
+                @click="$dispatch('filters:toggle')"
+              >
+                {% render 'icon', icon: 'caret' %}
+                Filters
+              </button>
+            {% endif %}
+            <span class="results-count">
+              {{ collection.products_count }} 
+              {% if collection.products_count == 1 %}product{% else %}products{% endif %}
+            </span>
+          </div>
+
+          {% if section.settings.enable_sorting %}
+            <div class="collection-sort">
+              <label for="sort-by" class="sort-label">Sort by:</label>
+              <select id="sort-by" class="sort-select" @change="updateSort($event.target.value)">
+                <option value="manual" {% if collection.sort_by == 'manual' %}selected{% endif %}>Featured</option>
+                <option value="best-selling" {% if collection.sort_by == 'best-selling' %}selected{% endif %}>Best Selling</option>
+                <option value="title-ascending" {% if collection.sort_by == 'title-ascending' %}selected{% endif %}>A-Z</option>
+                <option value="title-descending" {% if collection.sort_by == 'title-descending' %}selected{% endif %}>Z-A</option>
+                <option value="price-ascending" {% if collection.sort_by == 'price-ascending' %}selected{% endif %}>Price: Low to High</option>
+                <option value="price-descending" {% if collection.sort_by == 'price-descending' %}selected{% endif %}>Price: High to Low</option>
+                <option value="created-descending" {% if collection.sort_by == 'created-descending' %}selected{% endif %}>Newest</option>
+                <option value="created-ascending" {% if collection.sort_by == 'created-ascending' %}selected{% endif %}>Oldest</option>
+              </select>
+            </div>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+
+    <!-- Collection Content -->
+    <div class="collection-content">
+      <div class="container">
+        <div class="collection-layout">
+          <!-- Filter Sidebar -->
+          {% if section.settings.enable_filtering %}
+            <aside class="collection-filters-sidebar" id="collection-filters">
+              {% render 'collection-filters', collection: collection, results: collection.products %}
+            </aside>
+          {% endif %}
+
+          <!-- Product Grid -->
+          <main class="collection-main">
+            {% if collection.products.size > 0 %}
+              <div 
+                class="product-grid product-grid--{{ section.settings.columns_desktop }}-col-desktop product-grid--{{ section.settings.columns_mobile }}-col-mobile"
+                id="product-grid"
+              >
+                {% for product in collection.products %}
+                  {% render 'product-card', 
+                    product: product, 
+                    collection: collection,
+                    image_ratio: section.settings.image_ratio,
+                    show_secondary_image: section.settings.show_secondary_image,
+                    show_vendor: section.settings.show_vendor,
+                    show_rating: section.settings.show_rating
+                  %}
+                {% endfor %}
+              </div>
+
+              <!-- Pagination -->
+              {% if paginate.pages > 1 %}
+                <nav class="pagination" aria-label="Pagination">
+                  <div class="pagination__container">
+                    {% if paginate.previous %}
+                      <a href="{{ paginate.previous.url }}" class="pagination__link pagination__prev">
+                        {% render 'icon', icon: 'arrow-left' %}
+                        Previous
+                      </a>
+                    {% endif %}
+
+                    <div class="pagination__pages">
+                      {% for part in paginate.parts %}
+                        {% if part.is_link %}
+                          <a href="{{ part.url }}" class="pagination__link">{{ part.title }}</a>
+                        {% else %}
+                          {% if part.title == paginate.current_page %}
+                            <span class="pagination__current" aria-current="page">{{ part.title }}</span>
+                          {% else %}
+                            <span class="pagination__ellipsis">{{ part.title }}</span>
+                          {% endif %}
+                        {% endif %}
+                      {% endfor %}
+                    </div>
+
+                    {% if paginate.next %}
+                      <a href="{{ paginate.next.url }}" class="pagination__link pagination__next">
+                        Next
+                        {% render 'icon', icon: 'arrow-right' %}
+                      </a>
+                    {% endif %}
+                  </div>
+                </nav>
+              {% endif %}
+            {% else %}
+              <!-- Empty State -->
+              <div class="collection-empty">
+                <div class="empty-state">
+                  <h2 class="empty-state__title">No products found</h2>
+                  <p class="empty-state__message">
+                    We couldn't find any products in this collection. 
+                    Try browsing our other collections or use the search function.
+                  </p>
+                  <a href="{{ routes.all_products_collection_url }}" class="btn btn--primary">
+                    Browse All Products
+                  </a>
+                </div>
+              </div>
+            {% endif %}
+          </main>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    function collectionPage() {
+      return {
+        currentSort: '{{ collection.sort_by | default: 'manual' }}',
+        
+        updateSort(sortValue) {
+          this.currentSort = sortValue;
+          const url = new URL(window.location);
+          url.searchParams.set('sort_by', sortValue);
+          window.location.href = url.toString();
+        }
+      }
+    }
+  </script>
+{% endpaginate %}
+
+<style>
+  .collection-toolbar {
+    background-color: var(--color-background-secondary);
+    border-bottom: 1px solid var(--color-border);
+    margin-bottom: var(--spacing-xl);
+  }
+
+  .collection-toolbar__content {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: var(--spacing-md);
+    padding: var(--spacing-md) 0;
+  }
+
+  .product-grid--2-col-mobile {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .product-grid--1-col-mobile {
+    grid-template-columns: 1fr;
+  }
+
+  @media (min-width: 768px) {
+    .product-grid--2-col-desktop {
+      grid-template-columns: repeat(2, 1fr);
+    }
+    
+    .product-grid--3-col-desktop {
+      grid-template-columns: repeat(3, 1fr);
+    }
+    
+    .product-grid--4-col-desktop {
+      grid-template-columns: repeat(4, 1fr);
+    }
+    
+    .product-grid--5-col-desktop {
+      grid-template-columns: repeat(5, 1fr);
+    }
+  }
+
+  .filters-placeholder {
+    padding: var(--spacing-lg);
+    background-color: var(--color-background-secondary);
+    border-radius: var(--border-radius-md);
+    text-align: center;
+  }
+
+  .filters-placeholder h3 {
+    margin: 0 0 var(--spacing-sm) 0;
+    color: var(--color-text-primary);
+  }
+
+  .filters-placeholder p {
+    margin: 0;
+    font-size: var(--font-size-sm);
+    color: var(--color-text-secondary);
+  }
+</style>
+
+{% schema %}
+{
+  "name": "Product Grid",
+  "tag": "section",
+  "class": "section",
+  "settings": [
+    {
+      "type": "range",
+      "id": "products_per_page",
+      "min": 8,
+      "max": 50,
+      "step": 2,
+      "default": 24,
+      "label": "Products per page"
+    },
+    {
+      "type": "range",
+      "id": "columns_desktop",
+      "min": 2,
+      "max": 5,
+      "step": 1,
+      "default": 4,
+      "label": "Number of columns on desktop"
+    },
+    {
+      "type": "select",
+      "id": "image_ratio",
+      "options": [
+        {
+          "value": "adapt",
+          "label": "Adapt to image"
+        },
+        {
+          "value": "portrait",
+          "label": "Portrait"
+        },
+        {
+          "value": "square",
+          "label": "Square"
+        }
+      ],
+      "default": "square",
+      "label": "Image ratio"
+    },
+    {
+      "type": "checkbox",
+      "id": "show_secondary_image",
+      "default": true,
+      "label": "Show second product image on hover"
+    },
+    {
+      "type": "checkbox",
+      "id": "show_vendor",
+      "default": false,
+      "label": "Show product vendor"
+    },
+    {
+      "type": "checkbox",
+      "id": "show_rating",
+      "default": true,
+      "label": "Show product rating"
+    },
+    {
+      "type": "checkbox",
+      "id": "enable_filtering",
+      "default": true,
+      "label": "Enable filtering"
+    },
+    {
+      "type": "checkbox",
+      "id": "enable_sorting",
+      "default": true,
+      "label": "Enable sorting"
+    },
+    {
+      "type": "select",
+      "id": "columns_mobile",
+      "options": [
+        {
+          "value": "1",
+          "label": "1 column"
+        },
+        {
+          "value": "2",
+          "label": "2 columns"
+        }
+      ],
+      "default": "2",
+      "label": "Number of columns on mobile"
+    },
+    {
+      "type": "header",
+      "content": "Section padding"
+    },
+    {
+      "type": "range",
+      "id": "padding_top",
+      "min": 0,
+      "max": 100,
+      "step": 4,
+      "unit": "px",
+      "label": "Top padding",
+      "default": 36
+    },
+    {
+      "type": "range",
+      "id": "padding_bottom",
+      "min": 0,
+      "max": 100,
+      "step": 4,
+      "unit": "px",
+      "label": "Bottom padding",
+      "default": 36
+    }
+  ]
+}
+{% endschema %}
