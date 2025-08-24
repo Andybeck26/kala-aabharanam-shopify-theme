@@ -1,0 +1,46 @@
+<div class="template-404 page-width page-margin">
+  <div class="center">
+    <h1 class="title title--primary">
+      {{ 'templates.404.title' | t }}
+    </h1>
+    <p class="large-up-text">
+      {{ 'templates.404.subtext' | t }}
+    </p>
+    <a href="{{ routes.root_url }}" class="button">
+      {{ 'general.continue_shopping' | t }}
+    </a>
+  </div>
+</div>
+
+<style>
+  .template-404 {
+    text-align: center;
+    padding: 5rem 0;
+  }
+  
+  .template-404 h1 {
+    font-size: 3rem;
+    margin-bottom: 1rem;
+    color: var(--color-primary);
+  }
+  
+  .template-404 p {
+    font-size: 1.2rem;
+    margin-bottom: 2rem;
+    color: var(--color-text);
+  }
+  
+  .template-404 .button {
+    background-color: var(--color-primary);
+    color: white;
+    padding: 1rem 2rem;
+    text-decoration: none;
+    border-radius: 5px;
+    display: inline-block;
+    transition: background-color 0.3s ease;
+  }
+  
+  .template-404 .button:hover {
+    background-color: var(--color-accent);
+  }
+</style>
