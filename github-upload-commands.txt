@@ -1,0 +1,11 @@
+# GitHub Upload Commands
+# Replace 'your-username' with your actual GitHub username
+
+# Add remote origin (replace with your actual repository URL)
+git remote add origin https://github.com/your-username/kala-aabharanam-shopify-theme.git
+
+# Rename the main branch to 'main' (GitHub standard)
+git branch -M main
+
+# Push to GitHub
+git push -u origin main
